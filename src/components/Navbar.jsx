@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import {
   Menu,
@@ -18,8 +19,9 @@ export default function NavBar() {
   const [user, setUser] = useState(null);
   const [adminRole, setAdminRole] = useState(false);
 
-  const searchRef = useRef(null);
+  const navigate = useNavigate();
   const mobileSearchRef = useRef(null);
+  const searchRef = useRef(null);
 
   const isGuestAccount = (user) => {
     if (!user) return true;
@@ -120,7 +122,7 @@ export default function NavBar() {
     e.preventDefault();
     const q = e.target.querySelector('input').value.trim();
     if (q) {
-      window.location.href = `/search?q=${encodeURIComponent(q)}`;
+      navigate(`/search?q=${encodeURIComponent(q)}`);
       setSearchOpen(false);
     }
   }
@@ -140,7 +142,7 @@ export default function NavBar() {
   }
 
   function handleAuthRedirect() {
-    window.location.href = '#/auth';
+    navigate('/auth');
     closeMobileMenu();
   }
 
@@ -170,35 +172,43 @@ export default function NavBar() {
     >
       <div className="gcmt-navbar__container">
         <div className="gcmt-navbar__logo">
-          <a href="/">
+          <Link to="/">
             <img src={logo} alt="GCMT Herbal" />
-          </a>
+          </Link>
         </div>
 
         <nav className={`gcmt-navbar__menu ${mobileMenuOpen ? 'gcmt-navbar__menu--open' : ''}`}>
           <ul className="gcmt-navbar__links">
-            {['Home','Products','About','Blog','Contact','FAQ','Your Orders'].map(label => (
+            {[
+              { label: 'Home', path: '/' },
+              { label: 'Products', path: '/products' },
+              { label: 'About', path: '/about' },
+              { label: 'Blog', path: '/blog' },
+              { label: 'Contact', path: '/contact' },
+              { label: 'FAQ', path: '/faq' },
+              { label: 'Your Orders', path: '/your-orders' },
+            ].map(({ label, path }) => (
               <li key={label}>
-                <a
-                  href={`#/${label.toLowerCase().replace(/\s+/g, '-')}`}
+                <Link
+                  to={path}
                   className="gcmt-navbar__link"
                   onClick={closeMobileMenu}
                 >
                   {label}
-                </a>
+                </Link>
               </li>
             ))}
 
             {/* Admin Panel Link */}
             {adminRole && (
               <li>
-                <a
-                  href="/#/admin-landing"
+                <Link
+                  to="/admin-landing"
                   className="gcmt-navbar__link admin-link"
                   onClick={closeMobileMenu}
                 >
                   Admin Panel
-                </a>
+                </Link>
               </li>
             )}
 
@@ -259,14 +269,14 @@ export default function NavBar() {
           {/* Profile */}
           <div className="gcmt-navbar__profile-container">
             {user && !isGuest ? (
-              <a
-                href="#/profile"
+              <Link
+                to="/profile"
                 className="gcmt-navbar__action-btn gcmt-navbar__profile-btn"
                 aria-label="Profile"
               >
                 <User size={20} />
                 <span className="gcmt-navbar__profile-indicator" />
-              </a>
+              </Link>
             ) : (
               <button
                 className="gcmt-navbar__action-btn gcmt-navbar__auth-btn"
@@ -279,8 +289,8 @@ export default function NavBar() {
           </div>
 
           {/* Cart */}
-          <a
-            href="#/cart"
+          <Link
+            to="/cart"
             className="gcmt-navbar__action-btn gcmt-navbar__cart-btn"
             aria-label={`Cart${cartCount ? ` (${cartCount})` : ''}`}
           >
@@ -288,7 +298,7 @@ export default function NavBar() {
             {cartCount > 0 && (
               <span className="gcmt-navbar__cart-badge">{cartCount}</span>
             )}
-          </a>
+          </Link>
 
           {/* Mobile Toggle */}
           <button

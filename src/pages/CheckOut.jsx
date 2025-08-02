@@ -217,7 +217,7 @@ export default function Checkout() {
         amount: total.toFixed(2),
         currency: 'INR',
         redirect_url: 'https://gcmtshop-cca-backend-kappa.vercel.app/api/paymentResponse',
-        cancel_url: 'https://gcmtshop.com/#/payment-cancel',
+        cancel_url: 'https://gcmtshop.com/payment-cancel',
         language: 'EN',
         billing_name: formData.name.trim(),
         billing_address: formData.street.trim(),

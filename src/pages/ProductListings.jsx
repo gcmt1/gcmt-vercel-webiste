@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import ProductCard from '../components/ProductCard';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
+import { Helmet } from "react-helmet-async";
 import '../styles/ProductListingPage.css';
 
 export default function ProductListingPage() {
@@ -86,6 +87,30 @@ export default function ProductListingPage() {
   };
 
   return (
+      <>
+    <Helmet>
+      <title>Shop Herbal Charcoal Toothpaste & Natural Products | GCMT Shop</title>
+      <meta
+        name="description"
+        content="Browse GCMT's herbal and natural products including our charcoal toothpaste. 100% safe, chemical-free, and available in India."
+      />
+      <meta
+        name="keywords"
+        content="herbal products, charcoal toothpaste, natural dental care, GCMT Shop"
+      />
+      <meta
+        property="og:title"
+        content="Shop Herbal Charcoal Toothpaste & Natural Products"
+      />
+      <meta
+        property="og:description"
+        content="Explore our curated herbal products including our famous charcoal toothpaste. 100% natural and available across India."
+      />
+      <meta property="og:image" content="https://gcmtshop.com/images/toothpaste.jpg" />
+      <meta property="og:url" content="https://gcmtshop.com/products" />
+      <link rel="canonical" href="https://gcmtshop.com/products" />
+    </Helmet>
+
     <div className="product-listing-container">
       <header className="product-header">
         <h1 className="page-title">Shop Our Collection</h1>
@@ -190,5 +215,6 @@ export default function ProductListingPage() {
         </>
       )}
     </div>
+    </>
   );
 }

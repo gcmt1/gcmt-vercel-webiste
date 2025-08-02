@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import '../styles/ContactPage.css';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 const ContactPage = () => {
   const [form, setForm] = useState({ 
@@ -49,6 +50,16 @@ const ContactPage = () => {
   };
 
   return (
+    <>
+    <Helmet>
+  <title>Contact GCMT Shop | Herbal & Natural Products</title>
+  <meta name="description" content="Contact GCMT Shop for queries about herbal and natural products. We are here to help customers across India." />
+  <meta property="og:title" content="Contact GCMT Shop" />
+  <meta property="og:description" content="Reach out to GCMT Shop for support or product inquiries." />
+  <meta property="og:url" content="https://gcmtshop.com/contact" />
+  <link rel="canonical" href="https://gcmtshop.com/contact" />
+</Helmet>
+
     <div className="contact-page-container">
       <div className="contact-header">
         <h1>Contact Us</h1>
@@ -193,6 +204,7 @@ const ContactPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

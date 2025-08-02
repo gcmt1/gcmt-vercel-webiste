@@ -1,9 +1,10 @@
 import React from "react";
-import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppProvider } from "./AppContext";
 import { ToastProvider } from "./components/ToastContext";
 import { SessionContextProvider } from "@supabase/auth-helpers-react";
 import { createClient } from "@supabase/supabase-js";
+import { HelmetProvider } from "react-helmet-async";
 
 import HomePage from "./pages/HomePage";
 import ProductListingPage from "./pages/ProductListings";
@@ -38,6 +39,7 @@ const supabase = createClient(
 
 function App() {
   return (
+    <HelmetProvider>
     <SessionContextProvider supabaseClient={supabase}>
       <AppProvider>
         <ToastProvider>
@@ -85,6 +87,7 @@ function App() {
         </ToastProvider>
       </AppProvider>
     </SessionContextProvider>
+    </HelmetProvider>
   );
 }
 

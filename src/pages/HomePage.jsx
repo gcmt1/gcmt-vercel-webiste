@@ -6,6 +6,9 @@ import logo from '../assets/GCMT-logo.png';
 import marketingvideo from '../assets/marketing-video.mp4';
 import { ArrowRight, Instagram, Star } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+
 
 const HomePage = () => {
   const [products, setProducts] = useState([]);
@@ -37,6 +40,23 @@ const HomePage = () => {
   }, []);
 
   return (
+    <>
+       <Helmet>
+      <title>GCMT Shop | Herbal Charcoal Toothpaste & Natural Products</title>
+      <meta
+        name="description"
+        content="Buy GCMT's Herbal Charcoal Toothpaste for whiter teeth and fresh breath. 100% natural, chemical-free. Explore our upcoming agricultural products in India."
+      />
+      <meta name="keywords" content="herbal toothpaste, charcoal toothpaste, natural dental care, GCMT shop" />
+      <meta property="og:title" content="GCMT Shop | Herbal Charcoal Toothpaste & Natural Products" />
+      <meta
+        property="og:description"
+        content="Whiter teeth, fresh breath, 100% natural. GCMT Shop's Herbal Charcoal Toothpaste is available now."
+      />
+      <meta property="og:image" content="https://gcmtshop.com/images/toothpaste.jpg" />
+      <meta property="og:url" content="https://gcmtshop.com/" />
+      <link rel="canonical" href="https://gcmtshop.com/" />
+    </Helmet>
     <div className="homepage">
       <div className="announcement-bar">
         <p>Free shipping on your first order | 100% Secure Checkout </p>
@@ -47,12 +67,12 @@ const HomePage = () => {
           <h1>Natural Wellness, <br />Rooted in Tradition</h1>
           <p>Premium herbal supplements crafted from ancient Ayurvedic wisdom, backed by modern science.</p>
           <div className="hero-cta">
-            <a href="#/products">
+            <Link to="/products">
               <button className="primary-button">Shop Now</button>
-            </a>
-            <a href="#/about">
+            </Link>
+            <Link to="/about">
               <button className="secondary-button">Learn Our Story</button>
-            </a>
+            </Link>
           </div>
         </div>
         
@@ -73,9 +93,9 @@ const HomePage = () => {
       <section className="featured-products">
         <div className="section-header">
           <h2>Latest Products</h2>
-          <a href="#/products" className="view-all">
+          <Link to="/products" className="view-all">
             View All <ArrowRight size={16} />
-          </a>
+          </Link>
         </div>
         <div className="product-grid">
           {isDataFetched && products.length > 0 ? (
@@ -182,6 +202,7 @@ const HomePage = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

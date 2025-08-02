@@ -176,7 +176,7 @@ const YourOrders = () => {
           <Package className={styles.largeIcon} />
           <h2 className={styles.messageTitle}>No Orders Yet</h2>
           <p className={styles.messageText}>You haven't placed any orders yet. Start shopping to see your orders here.</p>
-          <a href="#/products" className={styles.primaryButton}>
+          <a href="/products" className={styles.primaryButton}>
             Start Shopping
           </a>
         </div>
@@ -252,7 +252,7 @@ const YourOrders = () => {
         {/* Footer */}
         <div className={styles.pageFooter}>
           <p className={styles.footerText}>Need help with your order?</p>
-          <a href="#/contact" className={styles.secondaryButton}>
+          <a href="/contact" className={styles.secondaryButton}>
             Contact Support
           </a>
         </div>

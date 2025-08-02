@@ -2,10 +2,20 @@ import React from 'react';
 import { Mail, Phone, MapPin, Award, Users, Shield } from 'lucide-react';
 import Photo from "../assets/GCMT-logo.png";
 import arya from "../assets/ARYA PATEL GCMT.jpg";
+import { Helmet } from 'react-helmet-async';
 import "../styles/AboutPage.css";
 
 export default function AboutPage() {
   return (
+    <>
+<Helmet>
+  <title>About GCMT Shop | Herbal & Natural Products</title>
+  <meta name="description" content="Learn about GCMT Shop, our mission to provide herbal and natural products in India, including our popular herbal charcoal toothpaste." />
+  <meta property="og:title" content="About GCMT Shop" />
+  <meta property="og:description" content="Learn about GCMT Shop and our mission to provide 100% natural products." />
+  <meta property="og:url" content="https://gcmtshop.com/about" />
+  <link rel="canonical" href="https://gcmtshop.com/about" />
+</Helmet>
     <div className="aboutus-page bg-white min-h-screen">
       {/* Hero Section */}
       <section className="aboutus-hero bg-gray-50 py-20">
@@ -222,7 +232,7 @@ Experience the power of Ayurveda. Trusted since 2012.              </p>
             </p>
             <a
               className="aboutus-cta-button bg-white text-blue-600 font-bold py-3 px-8 rounded-lg hover:bg-gray-100 transition duration-300 inline-block"
-              href="#/products"
+              href="/products"
             >
               Shop Now
             </a>
@@ -230,6 +240,7 @@ Experience the power of Ayurveda. Trusted since 2012.              </p>
         </div>
       </section>
     </div>
+    </>
   );
 }
 //test

@@ -8,6 +8,7 @@ import {
 import { supabase } from '../supabaseClient';
 import '../styles/ProductDetails.css';
 import AddToCartButton from '../components/AddToCartButton';
+import { Helmet } from "react-helmet-async";
 import ReviewSystem from '../components/ReviewSystem';
 
 const ProductDetail = () => {
@@ -305,6 +306,65 @@ const ProductDetail = () => {
   }
 
   return (
+
+    <>
+  <Helmet>
+    {/* Page Meta */}
+    <title>{product.name} | GCMT Shop</title>
+    <meta name="description" content={product.shortDescription || product.descriptionContent} />
+    <meta property="og:title" content={`${product.name} | GCMT Shop`} />
+    <meta property="og:description" content={product.shortDescription || product.descriptionContent} />
+    <meta property="og:image" content={product.images[0]} />
+    <meta property="og:url" content={`https://gcmtshop.com/product/${product.id}`} />
+    <link rel="canonical" href={`https://gcmtshop.com/product/${product.id}`} />
+
+    {/* Product Rich Snippet */}
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        name: product.name,
+        image: product.images,
+        description: product.shortDescription || product.descriptionContent,
+        sku: product.sku || product.id,
+        brand: { "@type": "Brand", name: "GCMT Shop" },
+        offers: {
+          "@type": "Offer",
+          url: `https://gcmtshop.com/product/${product.id}`,
+          priceCurrency: "INR",
+          price: product.discountPrice || product.price,
+          availability: product.stock > 0
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          itemCondition: "https://schema.org/NewCondition"
+        },
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: product.rating || 4.5,
+          reviewCount: 10
+        }
+      })}
+    </script>
+
+    {/* Breadcrumb Schema */}
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://gcmtshop.com" },
+          { "@type": "ListItem", position: 2, name: "Products", item: "https://gcmtshop.com/products" },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: product.name,
+            item: `https://gcmtshop.com/product/${product.id}`
+          }
+        ]
+      })}
+    </script>
+  </Helmet>
+
     <div className="product-page">
       <div className="container">
         <div className="breadcrumb">
@@ -627,6 +687,7 @@ const ProductDetail = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 
