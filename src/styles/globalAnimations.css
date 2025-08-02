@@ -1,0 +1,62 @@
+/* =============================
+   GLOBAL ANIMATIONS & EFFECTS
+============================= */
+
+/* Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fadeIn 0.6s ease-in forwards;
+}
+
+/* Slide Up */
+@keyframes slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.slide-up {
+  animation: slideUp 0.7s ease-out forwards;
+}
+
+/* Pop-In Scale */
+@keyframes popIn {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.pop-in {
+  animation: popIn 0.4s ease-out forwards;
+}
+
+/* Global link hover effect */
+a {
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+a:hover {
+  color: #007bff;
+  transform: translateY(-1px);
+}
+
+/* Section fade-in on scroll (optional with JS/IntersectionObserver) */
+.section-animated {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 0.8s ease-out;
+}
+.section-animated.visible {
+  opacity: 1;
+  transform: translateY(0);
+}

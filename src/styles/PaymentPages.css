@@ -1,0 +1,424 @@
+/* Payment Status Pages Styles */
+.payment-status-container,
+.order-confirmation-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.payment-status-card,
+.order-confirmation-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  animation: slideUp 0.6s ease-out;
+}
+
+.order-confirmation-card {
+  max-width: 800px;
+  text-align: left;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Headers */
+.payment-status-card h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.confirmation-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f8f9fa;
+}
+
+.confirmation-header h1 {
+  font-size: 2.2rem;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.confirmation-header p {
+  font-size: 1.1rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Status Colors */
+.payment-status-card.success h1 {
+  color: #28a745;
+}
+
+.payment-status-card.error h1 {
+  color: #dc3545;
+}
+
+.payment-status-card.cancel h1 {
+  color: #ffc107;
+}
+
+/* Order Details */
+.order-details {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 25px;
+  margin: 30px 0;
+  text-align: left;
+}
+
+.order-details h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span:first-child {
+  font-weight: 600;
+  color: #495057;
+}
+
+.detail-row span:last-child {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+/* Status Badges */
+.status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status.completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status.failed,
+.status.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  margin: 5px;
+  border-radius: 25px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.completed,
+.status-badge.confirmed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.processing,
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.failed,
+.status-badge.cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Messages */
+.success-message {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  border-radius: 10px;
+  padding: 25px;
+  margin: 25px 0;
+  color: #155724;
+}
+
+.success-message p {
+  margin: 10px 0;
+  font-size: 1.1rem;
+}
+
+.cancel-message {
+  background: #fff3cd;
+  border-radius: 10px;
+  padding: 25px;
+  margin: 25px 0;
+  color: #856404;
+}
+
+.cancel-message p {
+  margin: 10px 0;
+  font-size: 1.05rem;
+}
+
+/* Action Buttons */
+.action-buttons,
+.confirmation-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.btn {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745, #1e7e34);
+  color: white;
+}
+
+.btn-outline {
+  background: white;
+  color: #6c757d;
+  border: 2px solid #dee2e6;
+}
+
+.btn-outline:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+/* Order Confirmation Specific Styles */
+.order-info {
+  display: grid;
+  gap: 30px;
+}
+
+.info-section {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 25px;
+}
+
+.info-section h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 10px;
+}
+
+.status-info {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.customer-info p,
+.address-info p {
+  margin: 8px 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.item-quantity {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.item-price {
+  font-weight: 600;
+  color: #28a745;
+  font-size: 1.1rem;
+}
+
+.order-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+  border-top: 2px solid #dee2e6;
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .payment-status-card,
+  .order-confirmation-card {
+    padding: 25px;
+    margin: 10px;
+  }
+  
+  .payment-status-card h1 {
+    font-size: 2rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    margin: 5px 0;
+  }
+  
+  .order-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .detail-row,
+  .summary-row {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .payment-status-container,
+  .order-confirmation-container {
+    padding: 10px;
+  }
+  
+  .payment-status-card,
+  .order-confirmation-card {
+    padding: 20px;
+  }
+  
+  .confirmation-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .info-section {
+    padding: 20px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .payment-status-container,
+  .order-confirmation-container {
+    background: white;
+  }
+  
+  .confirmation-actions {
+    display: none;
+  }
+  
+  .order-confirmation-card {
+    box-shadow: none;
+    border: 1px solid #dee2e6;
+  }
+}

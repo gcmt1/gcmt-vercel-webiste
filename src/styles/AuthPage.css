@@ -1,0 +1,105 @@
+.auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+    font-family: 'Arial', sans-serif;
+    padding: 20px;
+  }
+  
+  .auth-page h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .auth-page input {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+  }
+  
+  .auth-page input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+  }
+  
+  .auth-page button {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 15px;
+    margin: 10px 0;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .auth-page button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+  }
+  
+  .auth-page button:active {
+    background-color: #004085;
+    transform: translateY(0);
+  }
+  
+  .auth-page input[type="text"] {
+    display: block;
+  }
+  
+  .auth-page input[type="text"]:not(:placeholder-shown) {
+    border-color: #28a745;
+  }
+  
+  .auth-page input[type="text"]:placeholder-shown {
+    border-color: #ccc;
+  }
+  
+  .auth-page button:first-of-type {
+    background-color: #28a745;
+  }
+  
+  .auth-page button:first-of-type:hover {
+    background-color: #218838;
+  }
+  
+  .auth-page button:first-of-type:active {
+    background-color: #1e7e34;
+  }
+  
+  .auth-page button:last-of-type {
+    background-color: #17a2b8;
+  }
+  
+  .auth-page button:last-of-type:hover {
+    background-color: #138496;
+  }
+  
+  .auth-page button:last-of-type:active {
+    background-color: #117a8b;
+  }
+  
+  .auth-page input::placeholder {
+    color: #999;
+    font-style: italic;
+  }
+  
+  .auth-page {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }

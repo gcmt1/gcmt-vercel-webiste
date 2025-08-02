@@ -1,0 +1,68 @@
+.payment-cancel-container {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  padding: 2rem;
+}
+
+.cancel-card {
+  background: #fff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.cancel-icon {
+  width: 80px;
+  margin-bottom: 1rem;
+}
+
+.cancel-card h1 {
+  color: #e63946;
+  margin-bottom: 0.5rem;
+}
+
+.cancel-card p {
+  color: #555;
+  margin-bottom: 1rem;
+}
+
+.cancel-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background-color: #e63946;
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #d62828;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.btn-outline:hover {
+  background-color: #f1f1f1;
+}

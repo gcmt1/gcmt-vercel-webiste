@@ -1,0 +1,971 @@
+/* ==== ADMIN PRODUCT MANAGER STYLES ==== */
+
+/* Container & Layout */
+.pmContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.pmMainContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Product Image Wrapper: fixed aspect ratio, responsive */
+.pmProductImageWrapper {
+  width: 90px;
+  height: 90px;
+  min-width: 90px;
+  min-height: 90px;
+  max-width: 120px;
+  max-height: 120px;
+  background: linear-gradient(135deg, #f7fafc 60%, #e3e8ee 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1.25rem;
+  box-shadow: 0 2px 8px 0 rgba(30, 41, 59, 0.06);
+}
+
+/* Product Image: contain, not stretch */
+.pmProductImage {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: 0 1px 4px 0 rgba(30, 41, 59, 0.04);
+  transition: transform 0.2s;
+}
+
+/* Header Section */
+.pmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.pmMainTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pmSubtitle {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 400;
+}
+
+.pmAddNewBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.pmAddNewBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.pmAddNewBtn:active {
+  transform: translateY(0);
+}
+
+/* Product List */
+.pmProductList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.pmProductCard {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pmProductCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.pmProductCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.pmCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.pmCardContent {
+  flex: 1;
+}
+
+.pmProductTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.pmPriceSection {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.pmCurrentPrice {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #059669;
+}
+
+.pmOriginalPrice {
+  font-size: 1.1rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+.pmDiscountBadge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pmMetaInfo {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pmStockBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.pmSizeBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.pmActionButtons {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.pmEditBtn, .pmDeleteBtn {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pmEditBtn {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pmEditBtn:hover {
+  background: #dbeafe;
+  transform: scale(1.05);
+}
+
+.pmDeleteBtn {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.pmDeleteBtn:hover {
+  background: #fee2e2;
+  transform: scale(1.05);
+}
+
+.pmProductDescription {
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Modal Styles */
+.pmModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.pmModalContent {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.4s ease-out;
+}
+
+.pmModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+  border-radius: 20px 20px 0 0;
+}
+
+.pmModalTitle {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0 0 0.5rem 0;
+}
+
+.pmModalSubtitle {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.pmModalActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pmHelpBtn, .pmCloseBtn {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pmHelpBtn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.pmHelpBtn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.pmCloseBtn {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.pmCloseBtn:hover {
+  background: #fee2e2;
+}
+
+/* Help Section */
+.pmHelpSection {
+  margin: 1rem 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+}
+
+.pmHelpTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a202c;
+  margin: 0 0 1rem 0;
+}
+
+.pmHelpList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pmHelpList li {
+  padding: 0.5rem 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.pmHelpList strong {
+  color: #1a202c;
+}
+
+/* Form Styles */
+.pmForm {
+  padding: 2rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.pmFormSection {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.pmForm label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.pmForm input,
+.pmForm textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.pmForm input:focus,
+.pmForm textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.pmForm textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Form Actions */
+.pmFormActions {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 0 0 20px 20px;
+  position: -webkit-sticky;
+  position: sticky;
+  bottom: 0;
+}
+
+.pmCancelBtn {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  background: white;
+  color: #6b7280;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pmCancelBtn:hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.pmSubmitBtn {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.pmSubmitBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.pmSubmitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Loading Spinner */
+.pmLoadingSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Error & Success Messages */
+.pmErrorContainer {
+  margin: 1rem 2rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  border-left: 4px solid #dc2626;
+}
+
+.pmErrorHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.pmErrorTitle {
+  font-weight: 600;
+  color: #dc2626;
+}
+
+.pmErrorList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pmErrorList li {
+  color: #dc2626;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}
+
+.pmErrorText {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+  font-weight: 500;
+}
+
+.pmSuccessContainer {
+  margin: 1rem 2rem;
+  padding: 1rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  border-left: 4px solid #059669;
+}
+
+.pmSuccessHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pmSuccessTitle {
+  font-weight: 600;
+  color: #059669;
+}
+
+/* Loading & Empty States */
+.pmLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  font-size: 1.1rem;
+  color: #6b7280;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.pmNoProducts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  font-size: 1.1rem;
+  color: #6b7280;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .pmContainer {
+    padding: 1.5rem;
+  }
+  
+  .pmProductList {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .pmContainer {
+    padding: 1rem;
+  }
+  
+  .pmHeader {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+  
+  .pmMainTitle {
+    font-size: 2rem;
+  }
+  
+  .pmAddNewBtn {
+    align-self: stretch;
+    justify-content: center;
+  }
+  
+  .pmProductList {
+    grid-template-columns: 1fr;
+  }
+  
+  .pmModalContent {
+    margin: 0.5rem;
+    max-height: 95vh;
+  }
+  
+  .pmModalHeader {
+    padding: 1.5rem;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .pmModalActions {
+    align-self: flex-end;
+  }
+  
+  .pmForm {
+    padding: 1.5rem;
+  }
+  
+  .pmFormActions {
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+  
+  .pmCancelBtn,
+  .pmSubmitBtn {
+    flex: none;
+  }
+  
+  .pmCardHeader {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .pmActionButtons {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .pmContainer {
+    padding: 0.5rem;
+  }
+  
+  .pmHeader {
+    padding: 1.5rem;
+  }
+  
+  .pmMainTitle {
+    font-size: 1.75rem;
+  }
+  
+  .pmProductCard {
+    padding: 1rem;
+  }
+  
+  .pmModalOverlay {
+    padding: 0.5rem;
+  }
+  
+  .pmModalHeader {
+    padding: 1rem;
+  }
+  
+  .pmForm {
+    padding: 1rem;
+  }
+  
+  .pmFormActions {
+    padding: 1rem;
+  }
+  
+  .pmPriceSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .pmCurrentPrice {
+    font-size: 1.25rem;
+  }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .pmProductCard,
+  .pmModalContent {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .pmContainer {
+    background: white;
+    padding: 0;
+  }
+  
+  .pmAddNewBtn,
+  .pmActionButtons,
+  .pmModalOverlay {
+    display: none;
+  }
+  
+  .pmProductCard {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus Styles for Keyboard Navigation */
+.pmAddNewBtn:focus,
+.pmEditBtn:focus,
+.pmDeleteBtn:focus,
+.pmHelpBtn:focus,
+.pmCloseBtn:focus,
+.pmCancelBtn:focus,
+.pmSubmitBtn:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+
+/* Container */
+.pmImageUploadSection {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Section Label */
+.pmImageUploadLabel {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Drop Zone */
+.pmDropZone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  transition: background-color 0.3s, border-color 0.3s;
+  cursor: pointer;
+  background-color: #f8fafc;
+}
+
+.pmDropZone:hover {
+  background-color: #f1f5f9;
+}
+
+.pmDropZoneActive {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Drop Zone Content */
+.pmDropZoneContent h3 {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.pmDropZoneContent p {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.pmUploadIcon {
+  color: #3b82f6;
+  opacity: 0.8;
+}
+
+/* Uploading State */
+.pmUploadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pmLoadingSpinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pmUploadHint {
+  font-style: italic;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* Error Text */
+.pmErrorText {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: -0.5rem;
+}
+
+/* Image Preview Grid */
+.pmImagePreviewGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pmPreviewTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pmImageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 1rem;
+}
+
+.pmImagePreviewItem {
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #fff;
+  transition: transform 0.2s ease;
+}
+
+.pmImagePreviewItem:hover {
+  transform: scale(1.02);
+}
+
+.pmPreviewImage {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+}
+
+/* Overlay and Remove Button */
+.pmImageOverlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  padding: 2px;
+}
+
+.pmRemoveImageBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #ef4444;
+  transition: color 0.2s ease;
+}
+
+.pmRemoveImageBtn:hover {
+  color: #dc2626;
+}
+
+/* Primary Badge */
+.pmPrimaryImageBadge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background-color: #10b981;
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Manual URL Input */
+.pmManualUrlSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pmManualUrlLabel {
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.pmManualImageInput {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 60px;
+  background-color: #f9fafb;
+  transition: border-color 0.2s ease;
+}
+
+.pmManualImageInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background-color: #ffffff;
+}
+
