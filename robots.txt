@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gcmtshop.com/sitemap.xml
