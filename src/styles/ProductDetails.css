@@ -1426,9 +1426,6 @@
 /* Override for super small screens ≤ 375px */
 @media (max-width: 375px) {
   .container {
-    padding: 0 6px;
-    width: 100vw;
-    max-width: 100vw;
     box-sizing: border-box;
     overflow-x: hidden;
   }

@@ -1,66 +1,88 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
-import '../styles/HomePage.css';
-import productPhoto from '../assets/Product1.jpg';
-import logo from '../assets/GCMT-logo.png';
-import marketingvideo from '../assets/marketing-video.mp4';
-import { ArrowRight, Instagram, Star, Shield, Users, Award, Truck } from 'lucide-react';
+import { ArrowRight, Instagram, Star, Shield, Truck, Award, Leaf, Play, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import { Helmet } from 'react-helmet-async';
-import { Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient'; // Import supabase client
+import '../styles/HomePage.css';
+import GCMTVideo from '../assets/marketing-video.mp4'; // Import marketing video
+import GCMTLogo from '../assets/GCMT-logo.png';
+import { redirect } from 'react-router-dom';
 
 const HomePage = () => {
   const [products, setProducts] = useState([]);
-  const [isDataFetched, setIsDataFetched] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   const testimonials = [
     { 
-      quote: "My teeth feel cleaner and whiter after just 2 weeks of using GCMT's herbal charcoal toothpaste. The natural ingredients give me confidence in what I'm putting in my mouth.", 
-      author: "Dr. Suresh Chauhan", 
+      quote: "The quality of their products is outstanding, will buy again! My teeth have never felt cleaner.", 
+      author: "Suresh Chauhan", 
       location: "Surat",
-      verified: true
+      rating: 5
     },
     { 
-      quote: "As a mother, I trust GCMT's natural products for my family. Their customer service answered all my questions about ingredients and safety.", 
+      quote: "Their customer service is exceptional. The charcoal toothpaste works wonders!", 
       author: "Pooja Mehta", 
       location: "Mumbai",
-      verified: true
+      rating: 5
     },
     { 
-      quote: "Been using their natural fertilizers for my organic farm. The quality is consistent and my crop yields have improved significantly.", 
+      quote: "I appreciate their commitment to quality. Natural ingredients make all the difference.", 
       author: "Ramesh Patel", 
       location: "Gandhinagar",
-      verified: true
+      rating: 5
     },
   ];
 
-  const trustIndicators = [
-    { icon: Shield, title: "100% Natural", subtitle: "Chemical-free guarantee" },
-    { icon: Users, title: "5000+ Happy Customers", subtitle: "Trusted across India" },
-    { icon: Award, title: "Quality Certified", subtitle: "Lab tested products" },
-    { icon: Truck, title: "Fast Delivery", subtitle: "Free shipping available" }
+  const benefits = [
+    {
+      icon: "🌿",
+      title: "100% Natural Ingredients",
+      description: "Ethically sourced herbs with no artificial additives or fillers"
+    },
+    {
+      icon: "🔬",
+      title: "Scientifically Validated",
+      description: "Traditional formulations backed by modern clinical research"
+    },
+    {
+      icon: "🌱",
+      title: "Sustainably Harvested",
+      description: "Supporting local farmers and sustainable agricultural practices"
+    },
+    {
+      icon: "⚗️",
+      title: "Potent Extracts",
+      description: "Concentrated herbal extracts for maximum bioavailability"
+    }
+  ];
+
+  const features = [
+    { icon: <Truck className="feature-icon" />, text: "Free Shipping on Orders Your First Order" },
+    { icon: <Shield className="feature-icon" />, text: "100% Secure Payment" },
+    { icon: <Award className="feature-icon" />, text: "UPI Available" },
+    { icon: <Leaf className="feature-icon" />, text: "Made in India" }
   ];
 
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
+        .limit(3); // Fetch only 3 products for the homepage
+      
       if (error) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching products:', error.message);
       } else {
         setProducts(data);
-        setIsDataFetched(true);
       }
+      setLoading(false);
     };
+
     fetchProducts();
   }, []);
 
-  // Auto-rotate testimonials every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
@@ -69,231 +91,206 @@ const HomePage = () => {
   }, [testimonials.length]);
 
   return (
-    <>
-      <Helmet>
-        <title>GCMT Shop | Premium Herbal Charcoal Toothpaste & Natural Agricultural Products</title>
-        <meta
-          name="description"
-          content="India's trusted herbal brand. GCMT's premium charcoal toothpaste and natural fertilizers. 100% chemical-free, scientifically tested. Free shipping on first order."
-        />
-        <meta name="keywords" content="herbal toothpaste, charcoal toothpaste, natural dental care, organic fertilizer, GCMT shop, ayurvedic products" />
-        <meta property="og:title" content="GCMT Shop | Premium Herbal Products Made in India" />
-        <meta
-          property="og:description"
-          content="Trusted by 5000+ customers. Premium herbal charcoal toothpaste and natural agricultural products. 100% chemical-free guarantee."
-        />
-        <meta property="og:image" content="https://gcmtshop.com/images/toothpaste.jpg" />
-        <meta property="og:url" content="https://gcmtshop.com/" />
-        <link rel="canonical" href="https://gcmtshop.com/" />
-      </Helmet>
+    <div className="homepage">
+      {/* Announcement Bar */}
+      <div className="announcement-bar">
+        <p>🎉 Free shipping on your first order | 100% Secure Checkout | Limited Time Offer! | UPI Available</p>
+      </div>
 
-      <div className="homepage">
-        {/* Trust-building announcement bar */}
-        <div className="announcement-bar">
-          <p>✅ Trusted by 5000+ customers | 🚚 Free shipping on orders above ₹500 | 🔒 100% Secure Checkout | 📞 24/7 Customer Support</p>
-        </div>
-
-        {/* Hero section with stronger value proposition */}
-        <section className="hero">
-          <div className="hero-content">
-            <div className="hero-badge">
-              <span>🏆 India's #1 Herbal Brand</span>
-            </div>
-            <h1>
-              Transform Your Health with 
-              <span className="highlight"> Nature's Wisdom</span>
-            </h1>
-            <p className="hero-subtitle">
-              Premium herbal products crafted from ancient Ayurvedic traditions, 
-              scientifically validated for modern families. Trusted by over 5,000 satisfied customers across India.
-            </p>
-            
-            {/* Value propositions */}
-            <div className="hero-benefits">
-              <div className="benefit-pill">✅ 100% Chemical-Free</div>
-              <div className="benefit-pill">✅ Lab Tested & Certified</div>
-              <div className="benefit-pill">✅ 30-Day Money Back</div>
-            </div>
-
-            <div className="hero-cta">
-              <Link to="/products">
-                <button className="primary-button">
-                  Shop Premium Products
-                  <ArrowRight size={18} />
+      {/* Hero Section */}
+      <section className="hero">
+        <div className="container">
+          <div className="hero-grid">
+            {/* Hero Content */}
+            <div className="hero-content">
+              <div className="hero-badge">✨ India's #1 Herbal Brand</div>
+              <h1 className="hero-title">
+                <span className="block">Natural Wellness,</span>
+                <span className="highlight">Rooted in Tradition</span>
+              </h1>
+              <p className="hero-subtitle">
+                Premium herbal supplements crafted from ancient Ayurvedic wisdom, 
+                backed by modern science for your complete wellness journey.
+              </p>
+              <div className="hero-buttons">
+                <button
+                  className="btn-primary"
+                  onClick={() => window.location.href = '/products'}
+                >
+                  Shop Now <ArrowRight />
                 </button>
-              </Link>
-              <Link to="/about">
-                <button className="secondary-button">Our Heritage & Quality Promise</button>
-              </Link>
-            </div>
-
-            {/* Social proof */}
-            <div className="hero-social-proof">
-              <div className="rating">
-                <div className="stars">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={16} fill="#FFD700" color="#FFD700" />
-                  ))}
+                <button className="btn-secondary"
+                onClick={() => window.location.href = '/about'}>
+                  Learn Our Story
+                </button>
+              </div>
+              <div className="hero-stats">
+                <div className="hero-stat">
+                  <span className="hero-stat-number">50K+</span>
+                  <span className="hero-stat-label">Happy Customers</span>
                 </div>
-                <span>4.8/5 from 2,000+ reviews</span>
+                <div className="hero-stat">
+                  <span className="hero-stat-number">4.8★</span>
+                  <span className="hero-stat-label">Average Rating</span>
+                </div>
+                <div className="hero-stat">
+                  <span className="hero-stat-number">100%</span>
+                  <span className="hero-stat-label">Natural</span>
+                </div>
               </div>
             </div>
+            <div className="hero-video-container">
+              <div className="hero-video-wrapper">
+                <video
+                  className="hero-video"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  poster={GCMTLogo}
+                >
+                  <source src={GCMTVideo} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div className="floating-element">
+                <Star fill="currentColor" />
+              </div>
+              <div className="floating-element">
+                <Leaf />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Bar */}
+      <section className="features-bar">
+        <div className="container">
+          <div className="features-grid">
+            {features.map((feature, index) => (
+              <div key={index} className="feature-item">
+                {feature.icon}
+                <span className="feature-text">{feature.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="products-section">
+        <div className="container">
+          <div className="section-header">
+            <h2 className="section-title">
+              Our Latest <span className="text-gradient">Products</span>
+            </h2>
+            <p className="section-subtitle">
+              Discover our premium collection of herbal wellness products, crafted with the finest natural ingredients
+            </p>
+            <div className="section-divider" />
           </div>
           
-          <div className="hero-image">
-            <video
-              src={marketingvideo}
-              alt="GCMT Premium Herbal Products"
-              className="hero-img"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-            <div className="hero-trust-badge">
-              <div className="badge-content">
-                <Shield size={24} />
-                <span>Quality Guaranteed</span>
+          <div className="products-grid">
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading-spinner" />
+                <p>Loading our amazing products...</p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Trust indicators section */}
-        <section className="trust-indicators">
-          <div className="trust-grid">
-            {trustIndicators.map((indicator, index) => {
-              const IconComponent = indicator.icon;
-              return (
-                <div key={index} className="trust-item">
-                  <IconComponent size={32} className="trust-icon" />
-                  <h4>{indicator.title}</h4>
-                  <p>{indicator.subtitle}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Featured products with better positioning */}
-        <section className="featured-products">
-          <div className="section-header">
-            <div className="header-content">
-              <h2>Our Bestselling Products</h2>
-              <p>Handpicked natural solutions trusted by thousands of families</p>
-            </div>
-            <Link to="/products" className="view-all">
-              View All Products <ArrowRight size={16} />
-            </Link>
-          </div>
-          <div className="product-grid">
-            {isDataFetched && products.length > 0 ? (
-              products.map(product => (
+            ) : (
+              products.map((product) => (
                 <ProductCard key={product.id} productId={product.id} />
               ))
-            ) : (
-              <div className="products-loading">
-                <p>Loading our premium products...</p>
-              </div>
             )}
           </div>
-        </section>
+          
+          <div className="text-center">
+            <button className="btn-primary"
+                  onClick={() => window.location.href = '/products'}
+>
+              View All Products <ArrowRight />
+            </button>
+          </div>
+        </div>
+      </section>
 
-        {/* Enhanced benefits section */}
-        <section className="benefits">
-          <div className="benefits-container">
-            <div className="benefit-image">
-              <img src={logo} alt="GCMT Quality Promise" className="benefit-img" />
-              <div className="quality-badge">
-                <Award size={20} />
-                <span>Premium Quality</span>
+      {/* Benefits Section */}
+      <section className="benefits-section">
+        <div className="container">
+          <div className="benefits-grid">
+            <div className="benefits-image-container">
+              <img 
+                src={GCMTLogo}
+                alt="GCMT Herbal Products" 
+                className="benefits-image"
+              />
+              <div className="benefits-badge">
+                <span className="benefits-badge-number">100%</span>
+                <span className="benefits-badge-text">Natural</span>
               </div>
             </div>
-            <div className="benefit-content">
-              <div className="section-badge">Why Choose GCMT</div>
-              <h2>The Science Behind Our Natural Solutions</h2>
-              <p className="benefit-intro">
-                Every GCMT product combines time-tested Ayurvedic wisdom with modern scientific validation, 
-                ensuring you get the best of both worlds.
+            
+            <div className="benefits-content">
+              <h2 className="benefits-title">
+                The GCMT <span className="text-gradient">Herbal</span> Difference
+              </h2>
+              <p className="benefits-subtitle">
+                Experience the perfect blend of ancient wisdom and modern innovation
               </p>
               
-              <ul className="benefits-list">
-                <li>
-                  <div className="benefit-icon">🌿</div>
-                  <div className="benefit-text">
-                    <h3>100% Natural Ingredients</h3>
-                    <p>Ethically sourced herbs with zero artificial additives, preservatives, or harmful chemicals</p>
+              <div className="benefits-list">
+                {benefits.map((benefit, index) => (
+                  <div key={index} className="benefit-item">
+                    <div className="benefit-icon">{benefit.icon}</div>
+                    <div className="benefit-text">
+                      <h3>{benefit.title}</h3>
+                      <p>{benefit.description}</p>
+                    </div>
                   </div>
-                </li>
-                <li>
-                  <div className="benefit-icon">🔬</div>
-                  <div className="benefit-text">
-                    <h3>Scientifically Validated</h3>
-                    <p>Traditional formulations rigorously tested in certified laboratories for safety and efficacy</p>
-                  </div>
-                </li>
-                <li>
-                  <div className="benefit-icon">🌱</div>
-                  <div className="benefit-text">
-                    <h3>Sustainably Sourced</h3>
-                    <p>Direct partnerships with organic farmers, supporting sustainable agriculture and fair trade</p>
-                  </div>
-                </li>
-                <li>
-                  <div className="benefit-icon">⚗️</div>
-                  <div className="benefit-text">
-                    <h3>Maximum Potency</h3>
-                    <p>Advanced extraction methods ensure optimal bioavailability and therapeutic effectiveness</p>
-                  </div>
-                </li>
-              </ul>
-              
-              <div className="benefit-cta">
-                <Link to="/about">
-                  <button className="secondary-button">Learn About Our Quality Process</button>
-                </Link>
+                ))}
               </div>
+              
+              <button className="btn-primary">
+                Learn More About Our Process
+              </button>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Enhanced testimonials with verification */}
-        <section className="testimonials">
+      {/* Testimonials */}
+      <section className="testimonials-section">
+        <div className="container">
           <div className="section-header">
-            <h2>Real Stories from Real Customers</h2>
-            <p>Join thousands of satisfied customers who trust GCMT for their family's health</p>
+            <h2 className="section-title">
+              Customer <span className="text-gradient">Experiences</span>
+            </h2>
+            <p className="section-subtitle">What our happy customers say about us</p>
           </div>
           
-          <div className="testimonial-carousel">
-            <div className="testimonial-container">
-              {testimonials.map((testimonial, index) => (
-                <div 
-                  key={index} 
-                  className={`testimonial-card ${index === activeTestimonial ? 'active' : ''}`}
-                  style={{ display: index === activeTestimonial ? 'block' : 'none' }}
-                >
-                  <div className="testimonial-header">
-                    <div className="testimonial-stars">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={18} fill="#FFD700" color="#FFD700" />
-                      ))}
-                    </div>
-                    {testimonial.verified && (
-                      <div className="verification-badge">
-                        <Shield size={14} />
-                        <span>Verified Customer</span>
+          <div className="testimonial-carousel-container">
+            <div className="testimonial-carousel">
+              <div 
+                className="testimonial-slides"
+                style={{ transform: `translateX(-${activeTestimonial * 100}%)` }}
+              >
+                {testimonials.map((testimonial, index) => (
+                  <div key={index} className="testimonial-slide">
+                    <div className="testimonial-card">
+                      <div className="testimonial-stars">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} fill="#FFD700" color="#FFD700" />
+                        ))}
                       </div>
-                    )}
-                  </div>
-                  <blockquote>"{testimonial.quote}"</blockquote>
-                  <div className="testimonial-author">
-                    <div className="author-info">
-                      <p className="author-name">{testimonial.author}</p>
-                      <span className="author-location">{testimonial.location}</span>
+                      <blockquote className="testimonial-quote">
+                        "{testimonial.quote}"
+                      </blockquote>
+                      <div className="testimonial-author">{testimonial.author}</div>
+                      <div className="testimonial-location">{testimonial.location}</div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             
             <div className="testimonial-controls">
@@ -302,64 +299,67 @@ const HomePage = () => {
                   key={index}
                   className={`testimonial-dot ${index === activeTestimonial ? 'active' : ''}`}
                   onClick={() => setActiveTestimonial(index)}
-                  aria-label={`View testimonial ${index + 1}`}
                 />
               ))}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Professional Instagram section */}
-        <section className="instagram-feed">
+      {/* Instagram Feed */}
+      <section className="instagram-section">
+        <div className="container">
           <div className="section-header">
-            <div className="header-content">
-              <h2>Follow Our Journey</h2>
-              <p>Stay updated with our latest products, tips, and customer success stories</p>
-            </div>
+            <h2 className="section-title">
+              Follow Our <span className="text-gradient">Journey</span>
+            </h2>
             <a 
               href="https://www.instagram.com/gcmt.shop.official/?utm_source=ig_web_button_share_sheet" 
-              className="view-all" 
               target="_blank" 
               rel="noopener noreferrer"
+              className="instagram-link"
             >
-              Follow @gcmt.shop.official <Instagram size={16} />
+              @gcmt.shop.official <Instagram />
             </a>
           </div>
           
           <div className="instagram-grid">
-            {[...Array(2)].map((_, i) => (
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="instagram-post">
-                <img src={logo} alt={`GCMT Instagram post ${i + 1}`} />
+                <img 
+                  src={GCMTLogo} // Replace with actual Instagram post image
+                  alt={`Instagram post ${i+1}`} 
+                />
                 <div className="instagram-overlay">
-                  <Instagram size={24} />
-                  <span>View on Instagram</span>
+                  <Instagram />
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Final CTA section */}
-        <section className="final-cta">
-          <div className="cta-content">
-            <h2>Ready to Experience Natural Wellness?</h2>
-            <p>Join thousands of satisfied customers and start your journey to better health today</p>
-            <div className="cta-buttons">
-              <Link to="/products">
-                <button className="primary-button large">
-                  Shop Now & Get Free Shipping
-                  <ArrowRight size={20} />
-                </button>
-              </Link>
-            </div>
-            <div className="cta-guarantee">
-              <Shield size={16} />
-              <span>30-Day Money Back Guarantee</span>
-            </div>
+      {/* Video Modal */}
+      {isVideoModalOpen && (
+        <div className="video-modal">
+          <div className="video-modal-content">
+            <button
+              onClick={() => setIsVideoModalOpen(false)}
+              className="video-modal-close"
+            >
+              <X />
+            </button>
+            <video
+              controls
+              autoPlay
+            >
+              <source src={GCMTVideo} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           </div>
-        </section>
-      </div>
-    </>
+        </div>
+      )}
+    </div>
   );
 };
 

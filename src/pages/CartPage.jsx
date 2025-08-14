@@ -143,7 +143,7 @@ function CartPage() {
           <ShoppingBag size={48} className="mx-auto text-gray-400 mb-4" />
           <h2 className="text-2xl font-medium text-gray-800 mb-2">Your cart is empty</h2>
           <p className="text-gray-500 mb-6">Looks like you haven't added anything to your cart yet.</p>
-          <a href="#/products" className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors">
+          <a href="/products" className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors">
             Continue Shopping
           </a>
         </div>
