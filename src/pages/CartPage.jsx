@@ -2,27 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
-import { useNavigate } from 'react-router-dom'; // 🔥 ADDED
+import { useNavigate } from 'react-router-dom';
 import '../styles/CartPage.css';
 import { Trash2, Minus, Plus, ShoppingBag } from 'lucide-react';
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true); // Track user authentication loading
   const { user } = useAppContext();
   const { showToast } = useToast();
-  const navigate = useNavigate(); // 🔥 ADDED
+  const navigate = useNavigate();
+
+  // Wait for user authentication state to be determined
+  useEffect(() => {
+    const checkAuthState = async () => {
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        setUserLoading(false);
+      } catch (error) {
+        console.error('Auth state check error:', error);
+        setUserLoading(false);
+      }
+    };
+
+    if (user !== undefined) {
+      setUserLoading(false);
+    } else {
+      checkAuthState();
+    }
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchCartItems = async () => {
+      // Don't fetch cart items until we know the user authentication state
+      if (userLoading) return;
+      
       setLoading(true);
       try {
         if (!user?.id) {
-          const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
-          if (isMounted) setCartItems(guestCart);
+          // For guest users, get cart from localStorage (more persistent than sessionStorage)
+          const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+          if (isMounted) {
+            setCartItems(guestCart);
+          }
         } else {
+          // For authenticated users, fetch from database
           const { data, error } = await supabase
             .from('cart_items')
             .select(`
@@ -40,16 +67,22 @@ function CartPage() {
           if (error) throw error;
 
           if (isMounted) {
-            setCartItems(
-              data.map(item => ({
-                id: item.id,
-                productId: item.product_id,
-                name: item.products.product_name,
-                price: item.products.product_price,
-                image: item.products.product_image,
-                quantity: item.quantity,
-              }))
-            );
+            const formattedItems = data.map(item => ({
+              id: item.id,
+              productId: item.product_id,
+              name: item.products.product_name,
+              price: item.products.product_price,
+              image: item.products.product_image,
+              quantity: item.quantity,
+            }));
+            
+            setCartItems(formattedItems);
+            
+            // Merge any guest cart items with user cart when user logs in
+            const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+            if (guestCart.length > 0) {
+              await mergeGuestCartWithUserCart(guestCart, formattedItems);
+            }
           }
         }
       } catch (err) {
@@ -65,7 +98,68 @@ function CartPage() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, showToast]);
+  }, [user?.id, userLoading, showToast]);
+
+  // Function to merge guest cart with user cart when user logs in
+  const mergeGuestCartWithUserCart = async (guestCart, userCart) => {
+    try {
+      const mergedItems = [...userCart];
+      
+      for (const guestItem of guestCart) {
+        const existingItemIndex = userCart.findIndex(
+          item => item.productId === guestItem.productId
+        );
+        
+        if (existingItemIndex >= 0) {
+          // Update quantity if item already exists
+          const newQuantity = userCart[existingItemIndex].quantity + guestItem.quantity;
+          await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('user_id', user.id)
+            .eq('product_id', guestItem.productId);
+          
+          mergedItems[existingItemIndex].quantity = newQuantity;
+        } else {
+          // Add new item to user cart
+          const { data, error } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: user.id,
+              product_id: guestItem.productId,
+              quantity: guestItem.quantity
+            })
+            .select(`
+              id,
+              product_id,
+              quantity,
+              products (
+                product_name,
+                product_price,
+                product_image
+              )
+            `);
+          
+          if (!error && data && data[0]) {
+            mergedItems.push({
+              id: data[0].id,
+              productId: data[0].product_id,
+              name: data[0].products.product_name,
+              price: data[0].products.product_price,
+              image: data[0].products.product_image,
+              quantity: data[0].quantity,
+            });
+          }
+        }
+      }
+      
+      setCartItems(mergedItems);
+      localStorage.removeItem('guest_cart'); // Clear guest cart after merge
+      showToast('Cart items merged successfully', 'success');
+    } catch (error) {
+      console.error('Error merging guest cart:', error);
+    }
+  };
 
   const updateQuantity = async (productId, change) => {
     const updatedItems = cartItems.map(item =>
@@ -85,16 +179,25 @@ function CartPage() {
           .eq('product_id', productId);
         if (error) throw error;
       } else {
-        sessionStorage.setItem('guest_cart', JSON.stringify(updatedItems));
+        // Use localStorage instead of sessionStorage for better persistence
+        localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
       }
       showToast('Quantity updated', 'success');
     } catch (err) {
       console.error('Update quantity error:', err.message);
       showToast('Failed to update quantity', 'error');
+      // Revert the optimistic update on error
+      const revertedItems = cartItems.map(item =>
+        item.productId === productId
+          ? { ...item, quantity: Math.max(1, item.quantity - change) }
+          : item
+      );
+      setCartItems(revertedItems);
     }
   };
 
   const removeItem = async productId => {
+    const itemToRemove = cartItems.find(item => item.productId === productId);
     const updatedItems = cartItems.filter(item => item.productId !== productId);
     setCartItems(updatedItems);
 
@@ -107,24 +210,42 @@ function CartPage() {
           .eq('product_id', productId);
         if (error) throw error;
       } else {
-        sessionStorage.setItem('guest_cart', JSON.stringify(updatedItems));
+        localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
       }
       showToast('Item removed', 'success');
     } catch (err) {
       console.error('Remove item error:', err.message);
       showToast('Failed to remove item', 'error');
+      // Revert the optimistic update on error
+      setCartItems(prevItems => [...prevItems, itemToRemove]);
     }
   };
 
   const handlePlaceOrder = async () => {
-    showToast('Redirecting to checkout...', 'success'); // ✅ Toast message
-    navigate('/checkout'); // ✅ Redirect immediately
+    if (cartItems.length === 0) {
+      showToast('Your cart is empty', 'error');
+      return;
+    }
+    
+    showToast('Redirecting to checkout...', 'success');
+    navigate('/checkout');
   };
 
   const calculateTotal = () =>
     cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     
   const calculateSubtotal = (price, quantity) => price * quantity;
+
+  // Show loading while determining user authentication state
+  if (userLoading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
@@ -166,6 +287,9 @@ function CartPage() {
                         src={item.image}
                         alt={item.name}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.target.src = '/placeholder-image.png'; // Fallback image
+                        }}
                       />
                     </div>
                     <div className="ml-4">
@@ -245,14 +369,15 @@ function CartPage() {
               
               <button 
                 type="button" 
-                className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-md font-medium transition-colors flex items-center justify-center"
+                className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-md font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handlePlaceOrder}
+                disabled={cartItems.length === 0}
               >
                 Proceed to Checkout
               </button>
               
               <div className="mt-4 text-center">
-                <a href="#/products" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                <a href="/products" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
                   Continue Shopping
                 </a>
               </div>
