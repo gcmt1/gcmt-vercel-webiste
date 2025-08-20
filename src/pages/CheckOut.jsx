@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
@@ -10,9 +10,8 @@ export default function Checkout() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  // Responsiveness
+    // Responsiveness
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -23,7 +22,9 @@ export default function Checkout() {
   const [cartItems, setCartItems] = useState([]);
   const [loadingCart, setLoadingCart] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [contactSaved, setContactSaved] = useState(false);
+  const [savedOrderId, setSavedOrderId] = useState(null);
+  const [paymentId, setPaymentId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,24 +39,22 @@ export default function Checkout() {
   
   useEffect(() => {
     fetchCart();
-  }, [user?.id]);
+  }, [user?.id, showToast]);
 
   const fetchCart = async () => {
     setLoadingCart(true);
     try {
       if (!user?.id) {
-        // Guest cart (sessionStorage)
         const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
         setCartItems(guestCart);
       } else {
-        // Logged-in user cart (Supabase)
         const { data, error } = await supabase
           .from('cart_items')
           .select(`
             id,
             product_id,
             quantity,
-            products:products (id, product_name, product_price, product_image)
+            products (product_name, product_price, product_image)
           `)
           .eq('user_id', user.id);
 
@@ -65,22 +64,22 @@ export default function Checkout() {
           data.map(item => ({
             id: item.id,
             productId: item.product_id,
-            name: item.products?.product_name ?? 'Unknown',
-            price: item.products?.product_price ?? 0,
-            image: item.products?.product_image ?? '',
+            name: item.products.product_name,
+            price: item.products.product_price,
+            image: item.products.product_image,
             quantity: item.quantity,
           }))
         );
       }
     } catch (err) {
       console.error('Fetch cart error:', err.message);
-      if (showToast) showToast('Failed to load cart', 'error');
+      showToast('Failed to load cart', 'error');
     } finally {
       setLoadingCart(false);
     }
   };
 
-  const clearCart = useCallback(async () => {
+  const clearCart = React.useCallback(async () => {
     try {
       if (user?.id) {
         await supabase.from('cart_items').delete().eq('user_id', user.id);
@@ -90,9 +89,8 @@ export default function Checkout() {
       setCartItems([]);
     } catch (err) {
       console.error('Error clearing cart:', err);
-      showToast('Failed to clear cart', 'error');
     }
-  }, [user?.id, showToast]);
+  }, [user?.id]);
 
   // ==================== FORM HANDLING ====================
   
@@ -104,31 +102,30 @@ export default function Checkout() {
   const validateForm = () => {
     const requiredFields = ['name', 'email', 'phone', 'street', 'city', 'state', 'pincode'];
     
-    // Check for empty fields
     for (let field of requiredFields) {
       if (!formData[field]?.trim()) {
-        showToast(`Please fill out the ${field.charAt(0).toUpperCase() + field.slice(1)} field.`, 'error');
+        showToast(`Please fill out the ${field} field.`, 'error');
         return false;
       }
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim())) {
+    if (!emailRegex.test(formData.email)) {
       showToast('Please enter a valid email address.', 'error');
       return false;
     }
 
     // Phone validation (10 digits)
     const phoneRegex = /^[0-9]{10}$/;
-    if (!phoneRegex.test(formData.phone.trim())) {
+    if (!phoneRegex.test(formData.phone)) {
       showToast('Please enter a valid 10-digit phone number.', 'error');
       return false;
     }
 
     // Pincode validation (6 digits)
     const pincodeRegex = /^[0-9]{6}$/;
-    if (!pincodeRegex.test(formData.pincode.trim())) {
+    if (!pincodeRegex.test(formData.pincode)) {
       showToast('Please enter a valid 6-digit pincode.', 'error');
       return false;
     }
@@ -138,111 +135,89 @@ export default function Checkout() {
 
   // ==================== CALCULATIONS ====================
   
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = 0; // Free shipping
+  const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const shipping = 0;
   const total = subtotal + shipping;
+  const formatCurrency = (amt) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amt);
+
+  // ==================== ORDER MANAGEMENT ====================
   
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', { 
-      style: 'currency', 
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    }).format(amount);
-
-  // ==================== ORDER CREATION ====================
-  
-  const createOrder = async (paymentMethod = 'ONLINE', paymentStatus = 'PENDING') => {
-    if (!validateForm()) return null;
-
-    if (cartItems.length === 0) {
-      showToast('Your cart is empty. Add items before checkout.', 'error');
-      return null;
-    }
-
-    try {
-      const product_list = cartItems.map((item) => ({
-        product_id: item.productId,
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
-
-      const generatedPaymentId = crypto.randomUUID();
-      const orderStatus = paymentStatus === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PROCESSING';
-
-      const orderData = {
-        user_id: user?.id || null,
-        user_name: formData.name.trim(),
-        user_email: formData.email.trim().toLowerCase(),
-        user_phone: formData.phone.trim(),
-        address_line: formData.street.trim(),
-        city: formData.city.trim(),
-        state: formData.state.trim(),
-        postal_code: formData.pincode.trim(),
-        product_list,
-        total_amount: total,
-        payment_status: paymentMethod,
-        order_status: orderStatus,
-        created_at: new Date().toISOString(),
-        payment_id: generatedPaymentId,
-      };
-
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([orderData])
-        .select('id, payment_id')
-        .single();
-
-      if (error) throw error;
-
-      return {
-        orderId: data.id,
-        paymentId: data.payment_id
-      };
-    } catch (err) {
-      console.error('Error creating order:', err);
-      throw new Error(`Failed to create order: ${err.message}`);
-    }
-  };
-
-  // ==================== FORM SUBMISSION ====================
-  
-  const handleSubmitForm = async () => {
+  const handleSaveContactInfo = async () => {
     if (!validateForm()) return;
-    
+
     if (cartItems.length === 0) {
       showToast('Your cart is empty. Add items before checkout.', 'error');
-      return;
-    }
-
-    setFormSubmitted(true);
-    showToast('Contact information validated! Choose your payment method below.', 'success');
-  };
-
-  // ==================== PAYMENT PROCESSING ====================
-  
-  const handleOnlinePayment = async () => {
-    if (!formSubmitted) {
-      showToast('Please submit your contact information first.', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      // Create order for online payment
-      const orderResult = await createOrder('ONLINE', 'PENDING');
-      if (!orderResult) return;
+      const product_list = cartItems.map((i) => ({
+        product_id: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        unit_price: i.price,
+        total_price: i.price * i.quantity,
+      }));
 
-      const { orderId, paymentId } = orderResult;
+      const generatedPaymentId = crypto.randomUUID();
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([
+          {
+            user_id: user?.id || null,
+            user_name: formData.name.trim(),
+            user_email: formData.email.trim().toLowerCase(),
+            user_phone: formData.phone.trim(),
+            address_line: formData.street.trim(),
+            city: formData.city.trim(),
+            state: formData.state.trim(),
+            postal_code: formData.pincode.trim(),
+            product_list,
+            total_amount: total,
+            payment_status: 'PENDING',
+            order_status: 'PROCESSING',
+            created_at: new Date().toISOString(),
+            payment_id: generatedPaymentId,
+          },
+        ])
+        .select('id, payment_id')
+        .single();
+
+      if (error) throw error;
+
+      setSavedOrderId(data.id);
+      setPaymentId(data.payment_id);
+      setContactSaved(true);
+      showToast('Contact info saved! You may now proceed to payment.', 'success');
+    } catch (err) {
+      console.error('Error saving contact info:', err);
+      showToast(`Failed to save contact info: ${err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== PAYMENT PROCESSING ====================
+  
+  const handlePayment = async () => {
+    if (!savedOrderId) {
+      showToast('Please save contact info before proceeding to payment.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const orderId = paymentId;
       
       const requestBody = {
-        order_id: paymentId,
+        order_id: orderId,
         amount: total.toFixed(2),
         currency: 'INR',
         redirect_url: 'https://gcmtshop-cca-backend-kappa.vercel.app/api/paymentResponse',
-        cancel_url: 'https://gcmtshop.com/payment-cancel',
+        cancel_url: 'https://gcmtshop.com/#/payment-cancel',
         language: 'EN',
         billing_name: formData.name.trim(),
         billing_address: formData.street.trim(),
@@ -252,13 +227,12 @@ export default function Checkout() {
         billing_country: 'India',
         billing_tel: formData.phone.trim(),
         billing_email: formData.email.trim().toLowerCase(),
-        merchant_param1: orderId.toString(),
+        merchant_param1: savedOrderId.toString(),
         merchant_param2: user?.id || localStorage.getItem('guest_identifier') || 'guest',
       };
 
       console.log('🚀 Initiating payment with request:', requestBody);
 
-      // Use the exact same fetch configuration as the working version
       const response = await fetch('https://gcmtshop-cca-backend.vercel.app/api/createOrder', {
         method: 'POST',
         headers: { 
@@ -281,15 +255,28 @@ export default function Checkout() {
       const result = await response.json();
       console.log('✅ Backend response:', result);
 
-      if (!result?.encRequest || typeof result.encRequest !== 'string' || result.encRequest.trim().length === 0) {
-        throw new Error('Invalid payment response from server');
+      if (!result || typeof result !== 'object') {
+        throw new Error('Invalid response format from backend');
+      }
+
+      if (!result.encRequest || typeof result.encRequest !== 'string') {
+        throw new Error('Missing or invalid encRequest in backend response');
+      }
+
+      if (result.encRequest.trim().length === 0) {
+        throw new Error('Empty encRequest received from backend');
       }
 
       const ACCESS_CODE = result.accessCode || process.env.NEXT_PUBLIC_ACCESS_CODE;
+      
       if (!ACCESS_CODE) {
         throw new Error('Access code not available');
       }
 
+      console.log('🔐 Encrypted request details:');
+      console.log('- Length:', result.encRequest.length);
+
+      setSavedOrderId(orderId);
       await submitToCCAvenue(result.encRequest, ACCESS_CODE);
 
     } catch (err) {
@@ -300,44 +287,12 @@ export default function Checkout() {
     }
   };
 
-  const handleCashOnDelivery = async () => {
-    if (!formSubmitted) {
-      showToast('Please submit your contact information first.', 'error');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Create order for cash on delivery
-      const orderResult = await createOrder('COD', 'CASH_ON_DELIVERY');
-      if (!orderResult) return;
-
-      // Clear cart and redirect
-      await clearCart();
-      showToast('Order placed successfully! You will pay cash on delivery.', 'success');
-      
-      // Navigate to success page
-      setTimeout(() => {
-        navigate('/payment-success', { 
-          state: { 
-            orderId: orderResult.orderId,
-            paymentMethod: 'COD' 
-          }
-        });
-      }, 1500);
-
-    } catch (err) {
-      console.error('Error placing COD order:', err);
-      showToast(err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const submitToCCAvenue = (encRequest, accessCode) => {
     return new Promise((resolve, reject) => {
       try {
         console.log('🔧 Starting CCAvenue form submission...');
+        console.log('📊 encRequest length:', encRequest?.length);
+        console.log('🔑 accessCode:', accessCode);
 
         if (!encRequest || typeof encRequest !== 'string' || encRequest.trim().length === 0) {
           throw new Error('Invalid encRequest: empty or not a string');
@@ -347,11 +302,9 @@ export default function Checkout() {
           throw new Error('Invalid accessCode: empty or not a string');
         }
 
-        // Clean up existing forms
         const existingForms = document.querySelectorAll('form[data-ccavenue-form="true"]');
         existingForms.forEach(form => form.remove());
 
-        // Create payment form
         const form = document.createElement('form');
         form.setAttribute('data-ccavenue-form', 'true');
         form.method = 'POST';
@@ -376,6 +329,8 @@ export default function Checkout() {
         document.body.appendChild(form);
 
         console.log('✅ Form created and ready to submit');
+        console.log('- encRequest:', encInput.value.substring(0, 100) + '...');
+        console.log('- accessCode:', accessInput.value);
 
         setTimeout(() => {
           try {
@@ -394,6 +349,10 @@ export default function Checkout() {
     });
   };
 
+  const handleCashOnDelivery = () => {
+    window.open('https://www.amazon.in/GCMT-Charcoal-Toothpaste-Formula-Whitening/dp/B0F83QJK2L', '_blank', 'noopener,noreferrer');
+  };
+
   // ==================== EVENT LISTENERS ====================
   
   useEffect(() => {
@@ -410,9 +369,9 @@ export default function Checkout() {
 
       if (event.data && event.data.type === 'PAYMENT_COMPLETE') {
         const { success, orderId } = event.data;
-        console.log('💳 Payment complete:', { success, orderId });
+        console.log('💳 Payment complete:', { success, orderId, savedOrderId });
         
-        if (success) {
+        if (success && orderId === savedOrderId) {
           clearCart();
           showToast('Payment successful! Order placed.', 'success');
           navigate(`/order-confirmation/${orderId}`);
@@ -424,7 +383,26 @@ export default function Checkout() {
 
     window.addEventListener('message', handlePaymentMessage);
     return () => window.removeEventListener('message', handlePaymentMessage);
-  }, [navigate, showToast, clearCart]);
+  }, [savedOrderId, navigate, showToast, clearCart]);
+
+  // Debug helper
+  window.debugCCAvenue = () => {
+    const debug = localStorage.getItem('ccavenue_debug');
+    const error = localStorage.getItem('ccavenue_error');
+    
+    console.log('🔍 CCAvenue Debug Info:');
+    if (debug) {
+      console.log('Debug:', JSON.parse(debug));
+    }
+    if (error) {
+      console.log('Error:', JSON.parse(error));
+    }
+    
+    const forms = document.querySelectorAll('form[data-ccavenue-form="true"]');
+    console.log('Remaining CCAvenue forms:', forms.length);
+    
+    return { debug: debug ? JSON.parse(debug) : null, error: error ? JSON.parse(error) : null };
+  };
 
   // ==================== RENDER COMPONENTS ====================
   
@@ -437,7 +415,15 @@ export default function Checkout() {
             <label>
               {field.charAt(0).toUpperCase() +
                 field.slice(1).replace(/([A-Z])/g, ' $1')}
-              <span style={{ color: 'red' }}> *</span>
+              {[
+                'name',
+                'email',
+                'phone',
+                'street',
+                'city',
+                'state',
+                'pincode',
+              ].includes(field) && ' *'}
             </label>
             <input
               type={
@@ -450,7 +436,7 @@ export default function Checkout() {
               name={field}
               value={formData[field]}
               onChange={handleChange}
-              disabled={formSubmitted || loading}
+              disabled={contactSaved}
               className="form-input"
               placeholder={
                 field === 'phone'
@@ -459,10 +445,6 @@ export default function Checkout() {
                   ? '6-digit postal code'
                   : field === 'email'
                   ? 'your@email.com'
-                  : field === 'name'
-                  ? 'Full Name'
-                  : field === 'street'
-                  ? 'House no, Street, Area'
                   : ''
               }
               maxLength={
@@ -475,22 +457,19 @@ export default function Checkout() {
             />
           </div>
         ))}
-        
-        {!formSubmitted && (
-          <button
-            onClick={handleSubmitForm}
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            {loading ? 'Validating...' : 'Submit Contact Information'}
-          </button>
-        )}
-        
-        {formSubmitted && (
-          <div className="success-message">
-            ✓ Contact information submitted successfully
-          </div>
-        )}
+        <button
+          onClick={handleSaveContactInfo}
+          disabled={loading || contactSaved}
+          className={`btn btn-primary ${
+            contactSaved ? 'btn-disabled' : ''
+          }`}
+        >
+          {loading
+            ? 'Saving...'
+            : contactSaved
+            ? 'Contact Info Saved ✓'
+            : 'Submit Contact Info'}
+        </button>
       </div>
     </div>
   );
@@ -500,159 +479,116 @@ export default function Checkout() {
       <h2>Order Summary</h2>
       <div className="checkout-card-body">
         {loadingCart ? (
-          <div className="loading-message">Loading cart…</div>
+          <p>Loading cart…</p>
         ) : cartItems.length ? (
           <ul className="order-summary-list">
             {cartItems.map((item, index) => (
-              <li key={item.id || index} className="order-summary-item">
+              <li
+                key={item.id || index}
+                className="order-summary-item"
+              >
                 <div className="order-item-details">
                   {item.image && (
                     <img
                       src={item.image}
                       alt={item.name}
                       className="order-item-image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
                     />
                   )}
-                  <div className="order-item-info">
-                    <div className="item-name">{item.name}</div>
-                    <div className="item-quantity">Qty: {item.quantity}</div>
-                    <div className="item-unit-price">
-                      {formatCurrency(item.price)} each
-                    </div>
+                  <div>
+                    <div>{item.name}</div>
+                    <div>Qty: {item.quantity}</div>
                   </div>
                 </div>
-                <div className="item-total">
-                  {formatCurrency(item.price * item.quantity)}
-                </div>
+                <div>{formatCurrency(item.price * item.quantity)}</div>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="empty-cart-message">
-            <p>No items in cart</p>
-            <button 
-              onClick={() => navigate('/products')}
-              className="btn btn-outline"
-            >
-              Continue Shopping
-            </button>
-          </div>
+          <p>No items in cart</p>
         )}
         
-        {cartItems.length > 0 && (
-          <>
-            <div className="summary-row">
-              <span>Subtotal ({cartItems.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="summary-row">
-              <span>Shipping</span>
-              <span className="free-shipping">Free</span>
-            </div>
-            <div className="summary-row summary-row-total">
-              <strong>Total Amount</strong>
-              <strong>{formatCurrency(total)}</strong>
-            </div>
-          </>
-        )}
+        <div className="summary-row">
+          <span>Subtotal</span>
+          <span>{formatCurrency(subtotal)}</span>
+        </div>
+        <div className="summary-row">
+          <span>Shipping</span>
+          <span>{shipping === 0 ? 'Free' : formatCurrency(shipping)}</span>
+        </div>
+        <div className="summary-row summary-row-total">
+          <strong>Total</strong>
+          <strong>{formatCurrency(total)}</strong>
+        </div>
       </div>
     </div>
   );
 
-  const renderPaymentActions = () => {
-    if (!formSubmitted || cartItems.length === 0) {
-      return (
-        <div className="checkout-actions">
-          <button
-            onClick={() => navigate('/cart')}
-            className="btn btn-outline"
-          >
-            Return to Cart
-          </button>
-          {!formSubmitted && (
-            <div className="payment-info">
-              Submit your contact information to choose payment method
-            </div>
-          )}
-        </div>
-      );
+  const handlePaymentClick = () => {
+    if (!contactSaved) {
+      showToast('Please submit the contact form before you can make a payment.', 'error');
+      return;
     }
+    handlePayment();
+  };
 
-    return (
-      <div className="checkout-actions">
+  const handleCashOnDeliveryClick = () => {
+    handleCashOnDelivery();
+  };
+
+  const renderPaymentActions = () => (
+    <div className="checkout-actions">
+      <button
+        onClick={() => navigate('/cart')}
+        className="btn btn-outline"
+      >
+        Return to Cart
+      </button>
+      
+      <button
+        onClick={handlePaymentClick}
+        disabled={loading || cartItems.length === 0}
+        className="btn btn-success"
+      >
+        {loading ? 'Processing...' : `Pay ${formatCurrency(total)} with CCAvenue`}
+      </button>
+      
+      <div style={{ marginTop: '1rem', textAlign: 'center' }}>
         <button
-          onClick={() => navigate('/cart')}
-          className="btn btn-outline"
-          disabled={loading}
+          onClick={handleCashOnDeliveryClick}
+          className="btn btn-warning"
+          style={{ marginBottom: '0.5rem' }}
         >
-          Return to Cart
+          Pay Cash on Delivery
         </button>
-        
-        <div className="payment-methods">
-          <h3>Choose Payment Method</h3>
-          
-          <button
-            onClick={handleOnlinePayment}
-            disabled={loading}
-            className="btn btn-success payment-btn"
-          >
-            {loading ? 'Processing...' : `Pay ${formatCurrency(total)} Online`}
-          </button>
-          
-          <div className="payment-divider">
-            <span>OR</span>
-          </div>
-          
-          <button
-            onClick={handleCashOnDelivery}
-            disabled={loading}
-            className="btn btn-warning payment-btn"
-          >
-            {loading ? 'Processing...' : 'Cash on Delivery'}
-          </button>
-          
-          <div className="payment-note">
-            Cash on Delivery: Pay when your order is delivered to your doorstep
-          </div>
+        <div style={{ fontSize: '0.95rem', color: '#555' }}>
+          Please Order from amazon for cash on delivery
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   // ==================== MAIN RENDER ====================
   
   return (
     <div className="checkout-container">
       <div className="checkout-wrapper">
-        <div className="checkout-header">
-          <h1 className="checkout-title">Checkout</h1>
-          <div className="checkout-steps">
-            <span className={`step ${true ? 'active' : ''}`}>1. Cart</span>
-            <span className={`step ${formSubmitted ? 'active' : ''}`}>2. Information</span>
-            <span className="step">3. Payment</span>
-          </div>
-        </div>
+        <h1 className="checkout-title">Checkout</h1>
 
         {isMobile ? (
-          <div className="mobile-layout">
+          <>
             {renderOrderSummary()}
             {renderShippingForm()}
             {renderPaymentActions()}
-          </div>
+          </>
         ) : (
-          <div className="desktop-layout">
-            <div className="left-column">
-              {renderShippingForm()}
-              {renderPaymentActions()}
-            </div>
-            <div className="right-column">
-              {renderOrderSummary()}
-            </div>
-          </div>
+          <>
+            {renderShippingForm()}
+            {renderOrderSummary()}
+            {renderPaymentActions()}
+          </>
         )}
+
       </div>
     </div>
   );
