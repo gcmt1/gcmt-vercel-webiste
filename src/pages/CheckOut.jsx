@@ -152,7 +152,7 @@ export default function Checkout() {
 
   // ==================== ORDER CREATION ====================
   
-  const createOrder = async (paymentMethod = 'PENDING', paymentStatus = 'PENDING') => {
+  const createOrder = async (paymentMethod = 'ONLINE', paymentStatus = 'PENDING') => {
     if (!validateForm()) return null;
 
     if (cartItems.length === 0) {
@@ -170,7 +170,7 @@ export default function Checkout() {
       }));
 
       const generatedPaymentId = crypto.randomUUID();
-      const orderStatus = paymentMethod === 'COD' ? 'CONFIRMED' : 'PROCESSING';
+      const orderStatus = paymentStatus === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PROCESSING';
 
       const orderData = {
         user_id: user?.id || null,
@@ -183,7 +183,7 @@ export default function Checkout() {
         postal_code: formData.pincode.trim(),
         product_list,
         total_amount: total,
-        payment_status: paymentStatus, // Use the passed parameter
+        payment_status: paymentMethod,
         order_status: orderStatus,
         created_at: new Date().toISOString(),
         payment_id: generatedPaymentId,
@@ -231,7 +231,7 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // Create order for online payment with PENDING status
+      // Create order for online payment
       const orderResult = await createOrder('ONLINE', 'PENDING');
       if (!orderResult) return;
 
@@ -258,6 +258,7 @@ export default function Checkout() {
 
       console.log('🚀 Initiating payment with request:', requestBody);
 
+      // Use the exact same fetch configuration as the working version
       const response = await fetch('https://gcmtshop-cca-backend.vercel.app/api/createOrder', {
         method: 'POST',
         headers: { 
@@ -307,7 +308,7 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // Create order for cash on delivery with CASH_ON_DELIVERY status
+      // Create order for cash on delivery
       const orderResult = await createOrder('COD', 'CASH_ON_DELIVERY');
       if (!orderResult) return;
 
