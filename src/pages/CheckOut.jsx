@@ -152,7 +152,7 @@ export default function Checkout() {
 
   // ==================== ORDER CREATION ====================
   
-  const createOrder = async (paymentMethod = 'ONLINE', paymentStatus = 'PENDING') => {
+  const createOrder = async (paymentMethod = 'PENDING', paymentStatus = 'PENDING') => {
     if (!validateForm()) return null;
 
     if (cartItems.length === 0) {
@@ -170,7 +170,7 @@ export default function Checkout() {
       }));
 
       const generatedPaymentId = crypto.randomUUID();
-      const orderStatus = paymentStatus === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PROCESSING';
+      const orderStatus = paymentMethod === 'COD' ? 'CONFIRMED' : 'PROCESSING';
 
       const orderData = {
         user_id: user?.id || null,
@@ -183,7 +183,7 @@ export default function Checkout() {
         postal_code: formData.pincode.trim(),
         product_list,
         total_amount: total,
-        payment_status: paymentMethod,
+        payment_status: paymentStatus, // Use the passed parameter
         order_status: orderStatus,
         created_at: new Date().toISOString(),
         payment_id: generatedPaymentId,
@@ -231,7 +231,7 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // Create order for online payment
+      // Create order for online payment with PENDING status
       const orderResult = await createOrder('ONLINE', 'PENDING');
       if (!orderResult) return;
 
@@ -307,7 +307,7 @@ export default function Checkout() {
 
     setLoading(true);
     try {
-      // Create order for cash on delivery
+      // Create order for cash on delivery with CASH_ON_DELIVERY status
       const orderResult = await createOrder('COD', 'CASH_ON_DELIVERY');
       if (!orderResult) return;
 
