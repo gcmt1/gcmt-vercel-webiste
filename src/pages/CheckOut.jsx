@@ -259,7 +259,7 @@ export default function Checkout() {
       console.log('🚀 Initiating payment with request:', requestBody);
 
       // Use the correct backend URL (choose the one that matches your deployment)
-      const response = await fetch('https://gcmtshop-cca-backend.vercel.app/api/createOrder', {
+      const response = await fetch('https://gcmtshop-cca-backend-kappa.vercel.app/api/createOrder', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
