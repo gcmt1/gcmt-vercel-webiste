@@ -4,12 +4,15 @@ import { useAppContext } from '../AppContext';
 import { useToast } from '../components/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import '../styles/CartPage.css';
-import { Trash2, Minus, Plus, ShoppingBag } from 'lucide-react';
+import product from '../assets/product.png';
+import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, Lock, Truck, Shield } from 'lucide-react';
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userLoading, setUserLoading] = useState(true); // Track user authentication loading
+  const [userLoading, setUserLoading] = useState(true);
+  const [updateLoading, setUpdateLoading] = useState(null);
+  const [removeLoading, setRemoveLoading] = useState(null);
   const { user } = useAppContext();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -37,19 +40,16 @@ function CartPage() {
     let isMounted = true;
 
     const fetchCartItems = async () => {
-      // Don't fetch cart items until we know the user authentication state
       if (userLoading) return;
       
       setLoading(true);
       try {
         if (!user?.id) {
-          // For guest users, get cart from localStorage (more persistent than sessionStorage)
           const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
           if (isMounted) {
             setCartItems(guestCart);
           }
         } else {
-          // For authenticated users, fetch from database
           const { data, error } = await supabase
             .from('cart_items')
             .select(`
@@ -72,13 +72,12 @@ function CartPage() {
               productId: item.product_id,
               name: item.products.product_name,
               price: item.products.product_price,
-              image: item.products.product_image,
+              image: product,
               quantity: item.quantity,
             }));
             
             setCartItems(formattedItems);
             
-            // Merge any guest cart items with user cart when user logs in
             const guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
             if (guestCart.length > 0) {
               await mergeGuestCartWithUserCart(guestCart, formattedItems);
@@ -100,7 +99,6 @@ function CartPage() {
     };
   }, [user?.id, userLoading, showToast]);
 
-  // Function to merge guest cart with user cart when user logs in
   const mergeGuestCartWithUserCart = async (guestCart, userCart) => {
     try {
       const mergedItems = [...userCart];
@@ -111,7 +109,6 @@ function CartPage() {
         );
         
         if (existingItemIndex >= 0) {
-          // Update quantity if item already exists
           const newQuantity = userCart[existingItemIndex].quantity + guestItem.quantity;
           await supabase
             .from('cart_items')
@@ -121,7 +118,6 @@ function CartPage() {
           
           mergedItems[existingItemIndex].quantity = newQuantity;
         } else {
-          // Add new item to user cart
           const { data, error } = await supabase
             .from('cart_items')
             .insert({
@@ -154,7 +150,7 @@ function CartPage() {
       }
       
       setCartItems(mergedItems);
-      localStorage.removeItem('guest_cart'); // Clear guest cart after merge
+      localStorage.removeItem('guest_cart');
       showToast('Cart items merged successfully', 'success');
     } catch (error) {
       console.error('Error merging guest cart:', error);
@@ -162,41 +158,44 @@ function CartPage() {
   };
 
   const updateQuantity = async (productId, change) => {
+    setUpdateLoading(productId);
+    const currentItem = cartItems.find(item => item.productId === productId);
+    const newQuantity = Math.max(1, currentItem.quantity + change);
+    
     const updatedItems = cartItems.map(item =>
       item.productId === productId
-        ? { ...item, quantity: Math.max(1, item.quantity + change) }
+        ? { ...item, quantity: newQuantity }
         : item
     );
     setCartItems(updatedItems);
 
     try {
       if (user) {
-        const updatedItem = updatedItems.find(i => i.productId === productId);
         const { error } = await supabase
           .from('cart_items')
-          .update({ quantity: updatedItem.quantity })
+          .update({ quantity: newQuantity })
           .eq('user_id', user.id)
           .eq('product_id', productId);
         if (error) throw error;
       } else {
-        // Use localStorage instead of sessionStorage for better persistence
         localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
       }
-      showToast('Quantity updated', 'success');
     } catch (err) {
       console.error('Update quantity error:', err.message);
       showToast('Failed to update quantity', 'error');
-      // Revert the optimistic update on error
       const revertedItems = cartItems.map(item =>
         item.productId === productId
-          ? { ...item, quantity: Math.max(1, item.quantity - change) }
+          ? { ...item, quantity: currentItem.quantity }
           : item
       );
       setCartItems(revertedItems);
+    } finally {
+      setUpdateLoading(null);
     }
   };
 
   const removeItem = async productId => {
+    setRemoveLoading(productId);
     const itemToRemove = cartItems.find(item => item.productId === productId);
     const updatedItems = cartItems.filter(item => item.productId !== productId);
     setCartItems(updatedItems);
@@ -212,12 +211,13 @@ function CartPage() {
       } else {
         localStorage.setItem('guest_cart', JSON.stringify(updatedItems));
       }
-      showToast('Item removed', 'success');
+      showToast('Item removed from cart', 'success');
     } catch (err) {
       console.error('Remove item error:', err.message);
       showToast('Failed to remove item', 'error');
-      // Revert the optimistic update on error
       setCartItems(prevItems => [...prevItems, itemToRemove]);
+    } finally {
+      setRemoveLoading(null);
     }
   };
 
@@ -227,7 +227,6 @@ function CartPage() {
       return;
     }
     
-    showToast('Redirecting to checkout...', 'success');
     navigate('/checkout');
   };
 
@@ -236,155 +235,227 @@ function CartPage() {
     
   const calculateSubtotal = (price, quantity) => price * quantity;
 
-  // Show loading while determining user authentication state
+  const getTotalItems = () => cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
   if (userLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="cart-loading-container">
+        <div className="cart-loading-spinner">
+          <div className="cart-spinner"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-semibold mb-8 text-gray-800">Shopping Cart</h1>
-
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-pulse">
-            <div className="h-8 w-28 bg-gray-200 rounded mb-4"></div>
-            <div className="h-32 w-full bg-gray-200 rounded mb-4"></div>
-            <div className="h-32 w-full bg-gray-200 rounded"></div>
+    <div className="cart-page-container">
+      <div className="cart-main-container">
+        {/* Header */}
+        <div className="cart-header">
+          <div className="cart-header-left">
+            <button
+              onClick={() => navigate(-1)}
+              className="cart-back-button"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
+            <div>
+              <h1 className="cart-title">Shopping Cart</h1>
+              {!loading && cartItems.length > 0 && (
+                <p className="cart-subtitle">{getTotalItems()} items in your cart</p>
+              )}
+            </div>
           </div>
         </div>
-      ) : cartItems.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-lg">
-          <ShoppingBag size={48} className="mx-auto text-gray-400 mb-4" />
-          <h2 className="text-2xl font-medium text-gray-800 mb-2">Your cart is empty</h2>
-          <p className="text-gray-500 mb-6">Looks like you haven't added anything to your cart yet.</p>
-          <a href="/products" className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors">
-            Continue Shopping
-          </a>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100">
-              <div className="hidden md:grid grid-cols-12 border-b py-4 px-6 text-sm font-medium text-gray-500">
-                <div className="col-span-6">Product</div>
-                <div className="col-span-2 text-center">Price</div>
-                <div className="col-span-2 text-center">Quantity</div>
-                <div className="col-span-2 text-center">Subtotal</div>
-              </div>
 
-              {cartItems.map(item => (
-                <div key={item.productId} className="grid grid-cols-1 md:grid-cols-12 py-6 px-4 md:px-6 border-b last:border-b-0 items-center">
-                  <div className="col-span-6 flex items-center mb-4 md:mb-0">
-                    <div className="relative h-20 w-20 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.target.src = '/placeholder-image.png'; // Fallback image
-                        }}
-                      />
+        {loading ? (
+          <div className="cart-loading-container">
+            <div className="cart-items-section">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="skeleton-item">
+                  <div className="skeleton-content">
+                    <div className="skeleton-image"></div>
+                    <div className="skeleton-text">
+                      <div className="skeleton-line"></div>
+                      <div className="skeleton-line"></div>
+                      <div className="skeleton-line"></div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="font-medium text-gray-800">{item.name}</h3>
-                      <button
-                        type="button"
-                        className="remove-button"
-                        onClick={() => removeItem(item.productId)}
-                        aria-label={`Remove ${item.name} from cart`}
-                      >
-                        <Trash2 size={16} className="mr-1" />
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="col-span-2 text-center text-gray-800 md:font-medium">
-                    <span className="inline-block md:hidden text-gray-500 mr-2">Price:</span>
-                    ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </div>
-
-                  <div className="col-span-2 flex justify-center my-4 md:my-0">
-                    <div className="flex items-center border rounded-md">
-                      <button
-                        type="button"
-                        className="flex items-center justify-center h-8 w-8 text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                        onClick={() => updateQuantity(item.productId, -1)}
-                        aria-label={`Decrease quantity of ${item.name}`}
-                        disabled={item.quantity === 1}
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="w-10 text-center font-medium">{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="flex items-center justify-center h-8 w-8 text-gray-600 hover:text-gray-800"
-                        onClick={() => updateQuantity(item.productId, 1)}
-                        aria-label={`Increase quantity of ${item.name}`}
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="col-span-2 text-center font-medium text-gray-900">
-                    <span className="inline-block md:hidden text-gray-500 mr-2">Subtotal:</span>
-                    ₹{calculateSubtotal(item.price, item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 sticky top-8">
-              <h2 className="text-lg font-semibold mb-4 pb-4 border-b">Order Summary</h2>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
-                  <span>₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            <div className="cart-summary-section">
+              <div className="skeleton-summary">
+                <div className="skeleton-summary-content">
+                  <div className="skeleton-summary-line"></div>
+                  <div className="skeleton-summary-line"></div>
+                  <div className="skeleton-summary-line"></div>
+                  <div className="skeleton-summary-button"></div>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Shipping</span>
-                  <span>Free</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Tax</span>
-                  <span>Calculated at checkout</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-between font-semibold text-lg pt-4 border-t">
-                <span>Total</span>
-                <span>₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-              
-              <button 
-                type="button" 
-                className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-md font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handlePlaceOrder}
-                disabled={cartItems.length === 0}
-              >
-                Proceed to Checkout
-              </button>
-              
-              <div className="mt-4 text-center">
-                <a href="/products" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                  Continue Shopping
-                </a>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : cartItems.length === 0 ? (
+          <div className="empty-cart-container">
+            <div className="empty-cart-card">
+              <div className="empty-cart-icon">
+                <ShoppingBag size={48} />
+              </div>
+              <h2 className="empty-cart-title">Your cart is empty</h2>
+              <p className="empty-cart-description">
+                Discover amazing products and add them to your cart to get started with your shopping journey.
+              </p>
+              <button
+                onClick={() => navigate('/products')}
+                className="empty-cart-button"
+              >
+                Start Shopping
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="cart-layout">
+            {/* Cart Items */}
+            <div className="cart-items-section">
+              <div className="cart-items-container">
+                {cartItems.map(item => (
+                  <div key={item.productId} className="cart-item">
+                    <div className="cart-item-content">
+                      <div className="cart-item-main">
+                        <div className="cart-item-image-container">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="cart-item-image"
+                            onError={(e) => {
+                              e.target.src = '/placeholder-image.png';
+                            }}
+                          />
+                        </div>
+                        <div className="cart-item-details">
+                          <h3 className="cart-item-name">{item.name}</h3>
+                          <p className="cart-item-price">
+                            ₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="cart-item-controls">
+                        <div className="quantity-controls">
+                          <button
+                            type="button"
+                            className="quantity-button"
+                            onClick={() => updateQuantity(item.productId, -1)}
+                            disabled={item.quantity === 1 || updateLoading === item.productId}
+                            aria-label={`Decrease quantity of ${item.name}`}
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <div className="quantity-display">
+                            {updateLoading === item.productId ? (
+                              <div className="quantity-loading"></div>
+                            ) : (
+                              item.quantity
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            className="quantity-button"
+                            onClick={() => updateQuantity(item.productId, 1)}
+                            disabled={updateLoading === item.productId}
+                            aria-label={`Increase quantity of ${item.name}`}
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        <div className="cart-item-subtotal-desktop">
+                          <p className="cart-item-subtotal-text">
+                            ₹{calculateSubtotal(item.price, item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="remove-button"
+                          onClick={() => removeItem(item.productId)}
+                          disabled={removeLoading === item.productId}
+                          aria-label={`Remove ${item.name} from cart`}
+                        >
+                          {removeLoading === item.productId ? (
+                            <div className="remove-loading"></div>
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div className="cart-item-subtotal-mobile">
+                      <p className="cart-item-subtotal-text">
+                        Subtotal: ₹{calculateSubtotal(item.price, item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="cart-summary-section">
+              <div className="order-summary">
+                <h2 className="order-summary-title">Order Summary</h2>
+                <div className="order-summary-details">
+                  <div className="summary-line">
+                    <span className="summary-label">Subtotal ({getTotalItems()} items)</span>
+                    <span className="summary-value">₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="summary-line">
+                    <span className="summary-label">Shipping</span>
+                    <span className="summary-value-free">Free</span>
+                  </div>
+                  <div className="summary-line">
+                    <span className="summary-label">Tax</span>
+                    <span className="summary-value-muted">Calculated at checkout</span>
+                  </div>
+                </div>
+                <div className="summary-divider"></div>
+                <div className="summary-total">
+                  <span className="summary-total-label">Total</span>
+                  <span className="summary-total-value">
+                    ₹{calculateTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="checkout-button"
+                  onClick={handlePlaceOrder}
+                  disabled={cartItems.length === 0}
+                >
+                  <Lock size={18} />
+                  Proceed to Checkout
+                </button>
+                <div className="trust-badges">
+                  <div className="trust-badge">
+                    <Shield size={16} className="trust-icon" />
+                    <span>Secure checkout</span>
+                  </div>
+                  <div className="trust-badge">
+                    <Truck size={16} className="trust-icon" />
+                    <span>Free shipping on all orders</span>
+                  </div>
+                </div>
+                <div className="continue-shopping">
+                  <button
+                    onClick={() => navigate('/products')}
+                    className="continue-shopping-link"
+                  >
+                    ← Continue Shopping
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

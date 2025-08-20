@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/CheckOut.css';
 
 export default function Checkout() {
-  const { user } = useAppContext();
+  const { user, setUser } = useAppContext(); // Make sure setUser is available from context
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -24,6 +24,7 @@ export default function Checkout() {
   const [loadingCart, setLoadingCart] = useState(true);
   const [loading, setLoading] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [autoCreatedAccount, setAutoCreatedAccount] = useState(false); // Track if account was auto-created
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -33,6 +34,41 @@ export default function Checkout() {
     state: '',
     pincode: '',
   });
+
+  // ==================== AUTO LOGIN ON PAGE LOAD ====================
+  
+  useEffect(() => {
+    checkSavedCredentials();
+  }, []);
+
+  const checkSavedCredentials = async () => {
+    try {
+      const savedEmail = localStorage.getItem('user_email');
+      const savedPassword = localStorage.getItem('user_password');
+      
+      if (savedEmail && savedPassword && !user?.id) {
+        console.log('🔄 Attempting auto-login with saved credentials...');
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: savedEmail,
+          password: savedPassword,
+        });
+
+        if (error) {
+          console.log('❌ Auto-login failed:', error.message);
+          // Clear invalid credentials
+          localStorage.removeItem('user_email');
+          localStorage.removeItem('user_password');
+        } else if (data?.session?.user) {
+          console.log('✅ Auto-login successful');
+          // The AppContext should handle the user state update
+          await mergeGuestCart(data.session.user.id);
+        }
+      }
+    } catch (err) {
+      console.error('Auto-login error:', err);
+    }
+  };
 
   // ==================== CART MANAGEMENT ====================
   
@@ -93,6 +129,162 @@ export default function Checkout() {
       showToast('Failed to clear cart', 'error');
     }
   }, [user?.id, showToast]);
+
+  const mergeGuestCart = async (userId) => {
+    try {
+      const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
+      
+      for (const item of guestCart) {
+        const { error } = await supabase.from('cart_items').upsert(
+          {
+            user_id: userId,
+            product_id: item.productId,
+            quantity: item.quantity,
+          },
+          { onConflict: ['user_id', 'product_id'] }
+        );
+
+        if (error) {
+          console.error('Cart merge error:', error);
+        }
+      }
+      
+      sessionStorage.removeItem('guest_cart');
+      console.log('✅ Guest cart merged successfully');
+    } catch (err) {
+      console.error('Error merging guest cart:', err);
+    }
+  };
+
+  // ==================== AUTO ACCOUNT CREATION ====================
+  
+  const createAccountSilently = async (email, name, password) => {
+    try {
+      console.log('🔄 Creating account silently...');
+      
+      // Check if user already exists by trying to sign in first
+      const { data: existingSignIn, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (existingSignIn?.session?.user && !signInError) {
+        console.log('✅ User already exists, signed in successfully');
+        await mergeGuestCart(existingSignIn.session.user.id);
+        
+        // Save credentials to localStorage
+        localStorage.setItem('user_email', email);
+        localStorage.setItem('user_password', password);
+        
+        // Update user context manually if setUser is available
+        if (setUser && typeof setUser === 'function') {
+          setUser(existingSignIn.session.user);
+        }
+        
+        return existingSignIn.session.user;
+      }
+
+      // Create new account if sign in failed
+      console.log('🆕 Creating new account...');
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: { name: name },
+        },
+      });
+
+      if (error) {
+        console.error('❌ Sign up error:', error.message);
+        
+        // If email already exists, try to sign in with different password patterns
+        if (error.message.includes('already registered') || error.message.includes('already exists')) {
+          console.log('🔄 Email exists, trying to sign in...');
+          
+          // Try common password patterns
+          const passwordAttempts = [
+            password,
+            name,
+            email.split('@')[0], // email username
+            `${name}123`,
+            `${name.toLowerCase()}`,
+          ];
+          
+          for (const pwd of passwordAttempts) {
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email: email,
+              password: pwd,
+            });
+
+            if (!signInError && signInData?.session?.user) {
+              console.log('✅ Successfully signed in with existing account');
+              await mergeGuestCart(signInData.session.user.id);
+              
+              // Save the working credentials
+              localStorage.setItem('user_email', email);
+              localStorage.setItem('user_password', pwd);
+              
+              // Update user context
+              if (setUser && typeof setUser === 'function') {
+                setUser(signInData.session.user);
+              }
+              
+              return signInData.session.user;
+            }
+          }
+        }
+        
+        return null;
+      }
+
+      if (data?.user) {
+        console.log('✅ Account created successfully, now signing in...');
+        
+        const userId = data.user.id;
+        
+        // Create user profile
+        const { error: profileError } = await supabase.from('users').insert({
+          id: userId,
+          email: email,
+          name: name,
+          role: 'user'
+        });
+
+        if (profileError) {
+          console.error('❌ Failed to create user profile:', profileError);
+        }
+
+        // Sign in the newly created user
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
+        });
+
+        if (!signInError && signInData?.session?.user) {
+          console.log('✅ New user signed in successfully');
+          await mergeGuestCart(signInData.session.user.id);
+          
+          // Save credentials to localStorage
+          localStorage.setItem('user_email', email);
+          localStorage.setItem('user_password', password);
+          
+          // Update user context
+          if (setUser && typeof setUser === 'function') {
+            setUser(signInData.session.user);
+          }
+          
+          return signInData.session.user;
+        } else {
+          console.error('❌ Failed to sign in new user:', signInError);
+        }
+      }
+
+      return null;
+    } catch (err) {
+      console.error('Error in createAccountSilently:', err);
+      return null;
+    }
+  };
 
   // ==================== FORM HANDLING ====================
   
@@ -161,6 +353,12 @@ export default function Checkout() {
     }
 
     try {
+      // Get the current user from the latest session
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id || user?.id;
+
+      console.log('📝 Creating order with user ID:', currentUserId);
+
       const product_list = cartItems.map((item) => ({
         product_id: item.productId,
         name: item.name,
@@ -173,7 +371,7 @@ export default function Checkout() {
       const orderStatus = paymentStatus === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PROCESSING';
 
       const orderData = {
-        user_id: user?.id || null,
+        user_id: currentUserId, // Use the current user ID from session
         user_name: formData.name.trim(),
         user_email: formData.email.trim().toLowerCase(),
         user_phone: formData.phone.trim(),
@@ -189,17 +387,25 @@ export default function Checkout() {
         payment_id: generatedPaymentId,
       };
 
+      console.log('📋 Order data to be inserted:', {
+        ...orderData,
+        product_list: orderData.product_list.length + ' items'
+      });
+
       const { data, error } = await supabase
         .from('orders')
         .insert([orderData])
-        .select('id, payment_id')
+        .select('id, payment_id, user_id')
         .single();
 
       if (error) throw error;
 
+      console.log('✅ Order created successfully:', data);
+
       return {
         orderId: data.id,
-        paymentId: data.payment_id
+        paymentId: data.payment_id,
+        userId: data.user_id
       };
     } catch (err) {
       console.error('Error creating order:', err);
@@ -217,8 +423,47 @@ export default function Checkout() {
       return;
     }
 
-    setFormSubmitted(true);
-    showToast('Contact information validated! Choose your payment method below.', 'success');
+    setLoading(true);
+
+    try {
+      // Create account silently if user is not logged in
+      if (!user?.id) {
+        console.log('🔄 User not logged in, creating account silently...');
+        
+        // Use name as password
+        const password = formData.name.trim();
+        const email = formData.email.trim().toLowerCase();
+        const name = formData.name.trim();
+
+        const createdUser = await createAccountSilently(email, name, password);
+        
+        if (createdUser) {
+          setAutoCreatedAccount(true);
+          console.log('✅ Account created and signed in silently');
+          
+          // Update the user context and wait for it to propagate
+          // The AppContext should handle this automatically via Supabase auth state changes
+          
+          // Wait a bit longer for the user context to update
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Refresh cart with new user context
+          await fetchCart();
+        } else {
+          console.log('⚠️ Could not create account, proceeding as guest');
+        }
+      }
+
+      setFormSubmitted(true);
+      showToast('Contact information validated! Choose your payment method below.', 'success');
+      
+    } catch (err) {
+      console.error('Error in handleSubmitForm:', err);
+      showToast('Information validated! Choose your payment method below.', 'success');
+      setFormSubmitted(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ==================== PAYMENT PROCESSING ====================
@@ -231,11 +476,17 @@ export default function Checkout() {
 
     setLoading(true);
     try {
+      // Ensure we have the latest session before creating order
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('💳 Current session before payment:', session?.user?.id);
+
       // Create order for online payment
       const orderResult = await createOrder('ONLINE', 'PENDING');
       if (!orderResult) return;
 
-      const { orderId, paymentId } = orderResult;
+      const { orderId, paymentId, userId } = orderResult;
+      
+      console.log('📦 Order created for payment:', { orderId, paymentId, userId });
       
       const requestBody = {
         order_id: paymentId,
@@ -253,12 +504,11 @@ export default function Checkout() {
         billing_tel: formData.phone.trim(),
         billing_email: formData.email.trim().toLowerCase(),
         merchant_param1: orderId.toString(),
-        merchant_param2: user?.id || localStorage.getItem('guest_identifier') || 'guest',
+        merchant_param2: userId || localStorage.getItem('guest_identifier') || 'guest',
       };
 
       console.log('🚀 Initiating payment with request:', requestBody);
 
-      // Use the correct backend URL (choose the one that matches your deployment)
       const response = await fetch('https://gcmtshop-cca-backend-kappa.vercel.app/api/createOrder', {
         method: 'POST',
         headers: { 
@@ -308,23 +558,42 @@ export default function Checkout() {
 
     setLoading(true);
     try {
+      // Ensure we have the latest session before creating order
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('💰 Current session before COD order:', session?.user?.id);
+
       // Create order for cash on delivery
       const orderResult = await createOrder('COD', 'CASH_ON_DELIVERY');
       if (!orderResult) return;
 
+      const { orderId, userId } = orderResult;
+      
+      console.log('📦 COD Order created:', { orderId, userId });
+
       // Clear cart and redirect
       await clearCart();
-      showToast('Order placed successfully! You will pay cash on delivery.', 'success');
+      
+      // Show account creation message if account was created
+      if (autoCreatedAccount) {
+        showToast('Order placed successfully! Your account has been created automatically. You can use your email and name to login next time.', 'success');
+      } else {
+        showToast('Order placed successfully! You will pay cash on delivery.', 'success');
+      }
       
       // Navigate to success page
       setTimeout(() => {
         navigate('/payment-success', { 
           state: { 
-            orderId: orderResult.orderId,
-            paymentMethod: 'COD' 
+            orderId: orderId,
+            paymentMethod: 'COD',
+            accountCreated: autoCreatedAccount,
+            credentials: autoCreatedAccount ? {
+              email: formData.email.trim().toLowerCase(),
+              password: formData.name.trim()
+            } : null
           }
         });
-      }, 1500);
+      }, 2000);
 
     } catch (err) {
       console.error('Error placing COD order:', err);
@@ -414,8 +683,23 @@ export default function Checkout() {
         
         if (success) {
           clearCart();
-          showToast('Payment successful! Order placed.', 'success');
-          navigate(`/order-confirmation/${orderId}`);
+          
+          // Show account creation message if account was created
+          if (autoCreatedAccount) {
+            showToast('Payment successful! Your account has been created automatically.', 'success');
+          } else {
+            showToast('Payment successful! Order placed.', 'success');
+          }
+          
+          navigate(`/order-confirmation/${orderId}`, {
+            state: {
+              accountCreated: autoCreatedAccount,
+              credentials: autoCreatedAccount ? {
+                email: formData.email.trim().toLowerCase(),
+                password: formData.name.trim()
+              } : null
+            }
+          });
         } else {
           showToast('Payment failed. Please try again.', 'error');
         }
@@ -424,7 +708,7 @@ export default function Checkout() {
 
     window.addEventListener('message', handlePaymentMessage);
     return () => window.removeEventListener('message', handlePaymentMessage);
-  }, [navigate, showToast, clearCart]);
+  }, [navigate, showToast, clearCart, autoCreatedAccount, formData]);
 
   // ==================== RENDER COMPONENTS ====================
   
@@ -482,7 +766,7 @@ export default function Checkout() {
             disabled={loading}
             className="btn btn-primary"
           >
-            {loading ? 'Validating...' : 'Submit Contact Information'}
+            {loading ? 'Processing...' : 'Submit Contact Information'}
           </button>
         )}
         
