@@ -888,7 +888,7 @@ export default function Checkout() {
         </button>
         
         <div className="payment-methods">
-          <h3>Choose Payment Method</h3>
+          <h3>Payment Method</h3>
           
           <button
             onClick={handleOnlinePayment}
@@ -896,18 +896,6 @@ export default function Checkout() {
             className="btn btn-success payment-btn"
           >
             {loading ? 'Processing...' : `Pay ${formatCurrency(total)} Online`}
-          </button>
-          
-          <div className="payment-divider">
-            OR
-          </div>
-          
-          <button
-            onClick={handleCashOnDelivery}
-            disabled={loading}
-            className="btn btn-secondary payment-btn"
-          >
-            {loading ? 'Processing...' : 'Cash on Delivery'}
           </button>
         </div>
       </div>
