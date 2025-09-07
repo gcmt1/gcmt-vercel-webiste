@@ -344,6 +344,7 @@ export default function Checkout() {
 
   // ==================== ORDER CREATION ====================
   
+  // 🔥 FIXED: Modified to properly handle payment status
   const createOrder = async (paymentMethod = 'ONLINE', paymentStatus = 'PENDING') => {
     if (!validateForm()) return null;
 
@@ -368,10 +369,21 @@ export default function Checkout() {
       }));
 
       const generatedPaymentId = crypto.randomUUID();
-      const orderStatus = paymentStatus === 'CASH_ON_DELIVERY' ? 'CONFIRMED' : 'PROCESSING';
+      
+      // 🔥 FIXED: Set proper payment status based on payment method
+      let finalPaymentStatus, orderStatus;
+      
+      if (paymentMethod === 'COD') {
+        finalPaymentStatus = 'CASH_ON_DELIVERY';
+        orderStatus = 'CONFIRMED';
+      } else {
+        // For online payments, always start with PENDING
+        finalPaymentStatus = 'PENDING';
+        orderStatus = 'PROCESSING';
+      }
 
       const orderData = {
-        user_id: currentUserId, // Use the current user ID from session
+        user_id: currentUserId,
         user_name: formData.name.trim(),
         user_email: formData.email.trim().toLowerCase(),
         user_phone: formData.phone.trim(),
@@ -381,7 +393,7 @@ export default function Checkout() {
         postal_code: formData.pincode.trim(),
         product_list,
         total_amount: total,
-        payment_status: paymentMethod,
+        payment_status: finalPaymentStatus, // 🔥 FIXED: Use proper status
         order_status: orderStatus,
         created_at: new Date().toISOString(),
         payment_id: generatedPaymentId,
@@ -480,7 +492,7 @@ export default function Checkout() {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('💳 Current session before payment:', session?.user?.id);
 
-      // Create order for online payment
+      // 🔥 FIXED: Create order with PENDING status for online payment
       const orderResult = await createOrder('ONLINE', 'PENDING');
       if (!orderResult) return;
 
@@ -876,7 +888,7 @@ export default function Checkout() {
         </button>
         
         <div className="payment-methods">
-          <h3> Payment Method</h3>
+          <h3>Choose Payment Method</h3>
           
           <button
             onClick={handleOnlinePayment}
@@ -887,7 +899,16 @@ export default function Checkout() {
           </button>
           
           <div className="payment-divider">
+            OR
           </div>
+          
+          <button
+            onClick={handleCashOnDelivery}
+            disabled={loading}
+            className="btn btn-secondary payment-btn"
+          >
+            {loading ? 'Processing...' : 'Cash on Delivery'}
+          </button>
         </div>
       </div>
     );
