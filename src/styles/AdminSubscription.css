@@ -1,261 +1,1088 @@
-/* AdminSubscription.css */
+/* ============================================
+   Admin Subscription Management Styles
+   Scoped with 'admin-subscription-' prefix
+   to prevent CSS collisions
+   ============================================ */
 
-:root {
-  --color-bg: #f9fafb;
-  --color-panel: #ffffff;
-  --color-primary: #2563eb;
-  --color-primary-hover: #1e40af;
-  --color-accent: #10b981;
-  --color-danger: #ef4444;
-  --color-gray-light: #e5e7eb;
-  --color-gray: #9ca3af;
-  --color-text: #374151;
-  --color-text-muted: #6b7280;
-  --radius: 0.5rem;
-  --shadow-default: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+/* CSS Custom Properties */
+.admin-subscription-page {
+  --as-primary: #2563eb;
+  --as-primary-hover: #1d4ed8;
+  --as-primary-light: #dbeafe;
+  --as-secondary: #64748b;
+  --as-secondary-hover: #475569;
+  --as-success: #10b981;
+  --as-success-light: #d1fae5;
+  --as-danger: #ef4444;
+  --as-danger-hover: #dc2626;
+  --as-danger-light: #fee2e2;
+  --as-warning: #f59e0b;
+  --as-warning-light: #fef3c7;
+  --as-purple: #8b5cf6;
+  --as-purple-light: #ede9fe;
+  --as-bg-primary: #f8fafc;
+  --as-bg-secondary: #ffffff;
+  --as-bg-tertiary: #f1f5f9;
+  --as-text-primary: #1e293b;
+  --as-text-secondary: #64748b;
+  --as-text-tertiary: #94a3b8;
+  --as-border: #e2e8f0;
+  --as-border-focus: #2563eb;
+  --as-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --as-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --as-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --as-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --as-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --as-radius-sm: 6px;
+  --as-radius: 8px;
+  --as-radius-md: 10px;
+  --as-radius-lg: 12px;
+  --as-radius-xl: 16px;
+  --as-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --as-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.admin-subscription {
-  background-color: var(--color-bg);
+/* Base Page Styles */
+.admin-subscription-page {
   min-height: 100vh;
-  padding: 2rem;
-  font-family: 'Inter', sans-serif;
-  color: var(--color-text);
+  background-color: var(--as-bg-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--as-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Container */
-.admin-subscription .container {
-  max-width: 1280px;
+.admin-subscription-page *,
+.admin-subscription-page *::before,
+.admin-subscription-page *::after {
+  box-sizing: border-box;
+}
+
+.admin-subscription-container {
+  max-width: 1400px;
   margin: 0 auto;
-  display: grid;
-  gap: 1.5rem;
+  padding: 24px;
 }
 
-/* Header */
-.admin-subscription .header {
+/* Loading State */
+.admin-subscription-loading {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-}
-.admin-subscription .header .title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-.admin-subscription .header .btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: var(--color-panel);
-  border: 1px solid var(--color-gray-light);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-.admin-subscription .header .btn-back:hover {
-  background-color: var(--color-gray-light);
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
 }
 
-/* Stats Grid */
-.admin-subscription .stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-.admin-subscription .stat-card {
-  background-color: var(--color-panel);
-  padding: 1rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-default);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.stat-card .info p:first-child {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-.stat-card .info p:last-child {
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: var(--color-text);
+.admin-subscription-loading-spinner {
+  color: var(--as-primary);
 }
 
-/* Controls */
-.admin-subscription .controls {
-  background-color: var(--color-panel);
-  padding: 1rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-default);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
+.admin-subscription-loading-text {
+  color: var(--as-text-secondary);
+  font-size: 16px;
+  margin: 0;
 }
 
-/* Search + Filter */
-.controls .search-group,
-.controls .filter-group {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
-}
-.controls input[type='text'],
-.controls select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  padding-left: 2rem;
-  border: 1px solid var(--color-gray-light);
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  color: var(--color-text);
-}
-.controls .icon {
-  position: absolute;
-  left: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-gray);
+.admin-subscription-spin {
+  animation: admin-subscription-rotate 1s linear infinite;
 }
 
-/* Action Buttons */
-.controls .actions {
-  display: flex;
-  gap: 0.5rem;
+@keyframes admin-subscription-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
-.controls button {
-  display: inline-flex;
+
+/* Toast Notifications */
+.admin-subscription-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  border-radius: var(--radius);
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: var(--as-radius);
+  box-shadow: var(--as-shadow-lg);
+  z-index: 10000;
+  animation: admin-subscription-slide-in 0.3s ease-out;
+  max-width: 400px;
+}
+
+@keyframes admin-subscription-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.admin-subscription-toast-success {
+  background-color: var(--as-success-light);
+  color: #065f46;
+  border: 1px solid var(--as-success);
+}
+
+.admin-subscription-toast-error {
+  background-color: var(--as-danger-light);
+  color: #991b1b;
+  border: 1px solid var(--as-danger);
+}
+
+.admin-subscription-toast-close {
+  background: none;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
-}
-.controls button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.controls .btn-refresh {
-  background-color: var(--color-panel);
-  border: 1px solid var(--color-gray-light);
-}
-.controls .btn-refresh:hover {
-  background-color: var(--color-gray-light);
-}
-.controls .btn-export {
-  background-color: var(--color-primary);
-  color: white;
-}
-.controls .btn-export:hover {
-  background-color: var(--color-primary-hover);
-}
-.controls .btn-delete {
-  background-color: var(--color-danger);
-  color: white;
-}
-.controls .btn-delete:hover {
-  background-color: #dc2626;
-}
-
-/* Table */
-.admin-subscription table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--color-panel);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-default);
-}
-.admin-subscription th,
-.admin-subscription td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.875rem;
-  color: var(--color-text);
-}
-.admin-subscription thead {
-  background-color: var(--color-gray-light);
-}
-.admin-subscription tbody tr {
-  border-top: 1px solid var(--color-gray-light);
-}
-.admin-subscription tbody tr:hover {
-  background-color: #f3f4f6;
-}
-
-/* Status Badge */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  background-color: var(--color-accent);
-  color: white;
-  font-size: 0.75rem;
-  border-radius: var(--radius);
-}
-
-/* Delete Modal */
-.admin-subscription .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0,0,0,0.5);
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  opacity: 0.7;
+  transition: opacity var(--as-transition);
+  margin-left: auto;
+  color: inherit;
 }
-.admin-subscription .modal {
-  background-color: var(--color-panel);
-  padding: 1.5rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-default);
-  width: 100%;
-  max-width: 400px;
+
+.admin-subscription-toast-close:hover {
+  opacity: 1;
 }
-.modal .modal-header {
+
+/* Header */
+.admin-subscription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-subscription-header-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  color: var(--color-danger);
+  gap: 16px;
 }
-.modal .modal-header h2 {
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-.modal .modal-body p {
-  margin-bottom: 1.25rem;
-  color: var(--color-text-muted);
-}
-.modal .modal-actions {
+
+.admin-subscription-header-icon {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--as-primary), #3b82f6);
+  color: white;
+  border-radius: var(--as-radius-md);
+  box-shadow: var(--as-shadow);
 }
-.modal button {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
+
+.admin-subscription-header-title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--as-text-primary);
+  margin: 0;
+}
+
+.admin-subscription-header-title p {
+  font-size: 14px;
+  color: var(--as-text-secondary);
+  margin: 4px 0 0 0;
+}
+
+/* Button Styles */
+.admin-subscription-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--as-radius);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
   cursor: pointer;
+  transition: all var(--as-transition);
+  white-space: nowrap;
+  text-decoration: none;
 }
-.modal .btn-cancel {
-  background-color: var(--color-panel);
-  border: 1px solid var(--color-gray-light);
+
+.admin-subscription-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-.modal .btn-cancel:hover {
-  background-color: var(--color-gray-light);
-}
-.modal .btn-confirm {
-  background-color: var(--color-danger);
+
+.admin-subscription-btn-primary {
+  background-color: var(--as-primary);
   color: white;
 }
-.modal .btn-confirm:hover {
-  background-color: #dc2626;
+
+.admin-subscription-btn-primary:hover:not(:disabled) {
+  background-color: var(--as-primary-hover);
+  box-shadow: var(--as-shadow);
+}
+
+.admin-subscription-btn-secondary {
+  background-color: var(--as-bg-secondary);
+  color: var(--as-text-primary);
+  border: 1px solid var(--as-border);
+}
+
+.admin-subscription-btn-secondary:hover:not(:disabled) {
+  background-color: var(--as-bg-tertiary);
+  border-color: var(--as-secondary);
+}
+
+.admin-subscription-btn-danger {
+  background-color: var(--as-danger);
+  color: white;
+}
+
+.admin-subscription-btn-danger:hover:not(:disabled) {
+  background-color: var(--as-danger-hover);
+  box-shadow: var(--as-shadow);
+}
+
+.admin-subscription-btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* Stats Cards */
+.admin-subscription-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.admin-subscription-stat-card {
+  background-color: var(--as-bg-secondary);
+  border-radius: var(--as-radius-lg);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--as-shadow);
+  border: 1px solid var(--as-border);
+  transition: all var(--as-transition);
+}
+
+.admin-subscription-stat-card:hover {
+  box-shadow: var(--as-shadow-md);
+  transform: translateY(-2px);
+}
+
+.admin-subscription-stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-subscription-stat-label {
+  font-size: 13px;
+  color: var(--as-text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-subscription-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--as-text-primary);
+}
+
+.admin-subscription-positive {
+  color: var(--as-success);
+}
+
+.admin-subscription-negative {
+  color: var(--as-danger);
+}
+
+.admin-subscription-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--as-radius-md);
+}
+
+.admin-subscription-stat-icon-blue {
+  background-color: var(--as-primary-light);
+  color: var(--as-primary);
+}
+
+.admin-subscription-stat-icon-purple {
+  background-color: var(--as-purple-light);
+  color: var(--as-purple);
+}
+
+.admin-subscription-stat-icon-green {
+  background-color: var(--as-success-light);
+  color: var(--as-success);
+}
+
+.admin-subscription-stat-icon-red {
+  background-color: var(--as-danger-light);
+  color: var(--as-danger);
+}
+
+/* Controls Panel */
+.admin-subscription-controls {
+  background-color: var(--as-bg-secondary);
+  border-radius: var(--as-radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--as-shadow);
+  border: 1px solid var(--as-border);
+  margin-bottom: 16px;
+}
+
+.admin-subscription-controls-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-subscription-controls-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Search Input */
+.admin-subscription-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 350px;
+}
+
+.admin-subscription-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--as-text-tertiary);
+  pointer-events: none;
+}
+
+.admin-subscription-search-input {
+  width: 100%;
+  padding: 10px 40px 10px 42px;
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius);
+  font-size: 14px;
+  color: var(--as-text-primary);
+  background-color: var(--as-bg-secondary);
+  transition: all var(--as-transition);
+}
+
+.admin-subscription-search-input::placeholder {
+  color: var(--as-text-tertiary);
+}
+
+.admin-subscription-search-input:focus {
+  outline: none;
+  border-color: var(--as-border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.admin-subscription-search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--as-text-tertiary);
+  transition: color var(--as-transition);
+  border-radius: 4px;
+}
+
+.admin-subscription-search-clear:hover {
+  color: var(--as-text-secondary);
+  background-color: var(--as-bg-tertiary);
+}
+
+/* Filter Select */
+.admin-subscription-filter {
+  position: relative;
+  min-width: 160px;
+}
+
+.admin-subscription-filter-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--as-text-tertiary);
+  pointer-events: none;
+}
+
+.admin-subscription-filter-select {
+  width: 100%;
+  padding: 10px 36px 10px 42px;
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius);
+  font-size: 14px;
+  color: var(--as-text-primary);
+  background-color: var(--as-bg-secondary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: all var(--as-transition);
+}
+
+.admin-subscription-filter-select:focus {
+  outline: none;
+  border-color: var(--as-border-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Results Info */
+.admin-subscription-results-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--as-text-secondary);
+  margin-bottom: 16px;
+  padding-left: 4px;
+}
+
+.admin-subscription-results-info strong {
+  color: var(--as-text-primary);
+  font-weight: 600;
+}
+
+.admin-subscription-selected-info {
+  color: var(--as-primary);
+  font-weight: 500;
+}
+
+/* Table Container */
+.admin-subscription-table-container {
+  background-color: var(--as-bg-secondary);
+  border-radius: var(--as-radius-lg);
+  box-shadow: var(--as-shadow);
+  border: 1px solid var(--as-border);
+  overflow: hidden;
+}
+
+/* Empty State */
+.admin-subscription-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.admin-subscription-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: var(--as-bg-tertiary);
+  color: var(--as-text-tertiary);
+  border-radius: 50%;
+  margin-bottom: 20px;
+}
+
+.admin-subscription-empty h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--as-text-primary);
+  margin: 0 0 8px 0;
+}
+
+.admin-subscription-empty p {
+  font-size: 14px;
+  color: var(--as-text-secondary);
+  margin: 0 0 20px 0;
+  max-width: 300px;
+}
+
+/* Desktop Table */
+.admin-subscription-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-subscription-table thead {
+  background-color: var(--as-bg-tertiary);
+  border-bottom: 1px solid var(--as-border);
+}
+
+.admin-subscription-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--as-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-subscription-th-checkbox {
+  width: 50px;
+  text-align: center !important;
+}
+
+.admin-subscription-table tbody tr {
+  border-bottom: 1px solid var(--as-border);
+  transition: background-color var(--as-transition);
+}
+
+.admin-subscription-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.admin-subscription-table tbody tr:hover {
+  background-color: var(--as-bg-tertiary);
+}
+
+.admin-subscription-row-selected {
+  background-color: var(--as-primary-light) !important;
+}
+
+.admin-subscription-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--as-text-primary);
+}
+
+.admin-subscription-td-checkbox {
+  width: 50px;
+  text-align: center;
+}
+
+.admin-subscription-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--as-border);
+  cursor: pointer;
+  accent-color: var(--as-primary);
+  transition: all var(--as-transition);
+}
+
+.admin-subscription-checkbox:hover {
+  border-color: var(--as-primary);
+}
+
+.admin-subscription-checkbox:checked {
+  border-color: var(--as-primary);
+}
+
+.admin-subscription-td-email {
+  max-width: 300px;
+}
+
+.admin-subscription-email {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.admin-subscription-td-date {
+  color: var(--as-text-secondary);
+  white-space: nowrap;
+}
+
+.admin-subscription-td-status {
+  white-space: nowrap;
+}
+
+.admin-subscription-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-subscription-status-active {
+  background-color: var(--as-success-light);
+  color: #065f46;
+}
+
+.admin-subscription-td-actions {
+  white-space: nowrap;
+}
+
+.admin-subscription-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--as-radius);
+  border: none;
+  cursor: pointer;
+  transition: all var(--as-transition);
+  background-color: transparent;
+}
+
+.admin-subscription-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-subscription-action-btn-delete {
+  color: var(--as-danger);
+}
+
+.admin-subscription-action-btn-delete:hover:not(:disabled) {
+  background-color: var(--as-danger-light);
+}
+
+/* Mobile Cards - Hidden by default */
+.admin-subscription-cards {
+  display: none;
+  padding: 16px;
+  gap: 12px;
+}
+
+.admin-subscription-card {
+  background-color: var(--as-bg-secondary);
+  border: 1px solid var(--as-border);
+  border-radius: var(--as-radius);
+  padding: 16px;
+  transition: all var(--as-transition);
+}
+
+.admin-subscription-card-selected {
+  background-color: var(--as-primary-light);
+  border-color: var(--as-primary);
+}
+
+.admin-subscription-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.admin-subscription-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-subscription-card-email {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: var(--as-text-primary);
+  word-break: break-all;
+}
+
+.admin-subscription-card-email svg {
+  flex-shrink: 0;
+  color: var(--as-text-tertiary);
+}
+
+.admin-subscription-card-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--as-text-secondary);
+}
+
+.admin-subscription-card-date svg {
+  flex-shrink: 0;
+  color: var(--as-text-tertiary);
+}
+
+.admin-subscription-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--as-border);
+}
+
+/* Modal Styles */
+.admin-subscription-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  padding: 16px;
+  animation: admin-subscription-fade-in 0.2s ease-out;
+}
+
+@keyframes admin-subscription-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.admin-subscription-modal {
+  background-color: var(--as-bg-secondary);
+  border-radius: var(--as-radius-lg);
+  box-shadow: var(--as-shadow-xl);
+  width: 100%;
+  max-width: 420px;
+  animation: admin-subscription-modal-in 0.2s ease-out;
+}
+
+@keyframes admin-subscription-modal-in {
+  from {
+    transform: scale(0.95) translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.admin-subscription-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+}
+
+.admin-subscription-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background-color: var(--as-danger-light);
+  color: var(--as-danger);
+  border-radius: 50%;
+}
+
+.admin-subscription-modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--as-text-primary);
+  margin: 0;
+}
+
+.admin-subscription-modal-body {
+  padding: 16px 24px 24px;
+}
+
+.admin-subscription-modal-body p {
+  color: var(--as-text-secondary);
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.admin-subscription-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .admin-subscription-container {
+    padding: 20px;
+  }
+  
+  .admin-subscription-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .admin-subscription-stat-card {
+    padding: 20px;
+  }
+  
+  .admin-subscription-stat-value {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-subscription-container {
+    padding: 16px;
+  }
+  
+  .admin-subscription-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .admin-subscription-header-title {
+    gap: 12px;
+  }
+  
+  .admin-subscription-header-icon {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .admin-subscription-header-title h1 {
+    font-size: 20px;
+  }
+  
+  .admin-subscription-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .admin-subscription-stat-card {
+    padding: 18px;
+  }
+  
+  .admin-subscription-stat-value {
+    font-size: 26px;
+  }
+  
+  .admin-subscription-stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .admin-subscription-controls {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+  
+  .admin-subscription-controls-left {
+    width: 100%;
+  }
+  
+  .admin-subscription-controls-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .admin-subscription-search {
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .admin-subscription-filter {
+    width: 100%;
+  }
+  
+  .admin-subscription-btn {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .admin-subscription-btn span {
+    display: inline;
+  }
+  
+  /* Hide desktop table, show cards on mobile */
+  .admin-subscription-table {
+    display: none;
+  }
+  
+  .admin-subscription-cards {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .admin-subscription-results-info {
+    flex-wrap: wrap;
+    padding: 0 4px;
+  }
+  
+  .admin-subscription-toast {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-subscription-container {
+    padding: 12px;
+  }
+  
+  .admin-subscription-header-title h1 {
+    font-size: 18px;
+  }
+  
+  .admin-subscription-header-title p {
+    font-size: 13px;
+  }
+  
+  .admin-subscription-header-icon {
+    width: 38px;
+    height: 38px;
+  }
+  
+  .admin-subscription-header-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .admin-subscription-stat-card {
+    padding: 16px;
+  }
+  
+  .admin-subscription-stat-label {
+    font-size: 12px;
+  }
+  
+  .admin-subscription-stat-value {
+    font-size: 22px;
+  }
+  
+  .admin-subscription-stat-icon {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .admin-subscription-controls {
+    padding: 14px;
+    gap: 12px;
+  }
+  
+  .admin-subscription-controls-right {
+    flex-direction: column;
+  }
+  
+  .admin-subscription-btn {
+    width: 100%;
+    padding: 12px 16px;
+  }
+  
+  .admin-subscription-card {
+    padding: 14px;
+  }
+  
+  .admin-subscription-card-email {
+    font-size: 14px;
+  }
+  
+  .admin-subscription-modal {
+    margin: 12px;
+  }
+  
+  .admin-subscription-modal-header,
+  .admin-subscription-modal-body,
+  .admin-subscription-modal-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  
+  .admin-subscription-modal-footer {
+    flex-direction: column-reverse;
+  }
+  
+  .admin-subscription-modal-footer .admin-subscription-btn {
+    width: 100%;
+  }
+}
+
+/* High-resolution displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .admin-subscription-page {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Print styles */
+@media print {
+  .admin-subscription-page {
+    background-color: white;
+  }
+  
+  .admin-subscription-controls,
+  .admin-subscription-btn,
+  .admin-subscription-toast,
+  .admin-subscription-modal-overlay,
+  .admin-subscription-td-actions,
+  .admin-subscription-th-checkbox,
+  .admin-subscription-td-checkbox,
+  .admin-subscription-card-footer {
+    display: none !important;
+  }
+  
+  .admin-subscription-table-container,
+  .admin-subscription-stat-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+
+/* Focus visible styles for accessibility */
+.admin-subscription-page :focus-visible {
+  outline: 2px solid var(--as-primary);
+  outline-offset: 2px;
+}
+
+.admin-subscription-page button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .admin-subscription-page *,
+  .admin-subscription-page *::before,
+  .admin-subscription-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .admin-subscription-spin {
+    animation: none;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .admin-subscription-page[data-theme="auto"] {
+    --as-bg-primary: #0f172a;
+    --as-bg-secondary: #1e293b;
+    --as-bg-tertiary: #334155;
+    --as-text-primary: #f1f5f9;
+    --as-text-secondary: #94a3b8;
+    --as-text-tertiary: #64748b;
+    --as-border: #334155;
+  }
 }
