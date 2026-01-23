@@ -1,6 +1,7 @@
 {
   "name": "gcmt-website",
   "version": "0.1.0",
+  "homepage": "https://gcmtshop.com/",
   "private": true,
   "dependencies": {
     "@supabase/auth-helpers-react": "^0.5.0",
