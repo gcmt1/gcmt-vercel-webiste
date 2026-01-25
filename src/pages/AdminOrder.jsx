@@ -6,7 +6,7 @@ import {
   Search, Calendar, Trash2, Eye, Package, CheckCircle, Clock, 
   AlertCircle, RefreshCw, X, ChevronDown, Truck, PackageCheck, 
   XCircle, User, MapPin, Phone, Mail, CreditCard, Filter, 
-  ChevronLeft, ChevronRight, MoreVertical, ShoppingBag
+  ChevronLeft, ChevronRight, MoreVertical, ShoppingBag, Banknote
 } from 'lucide-react';
 
 // ============================================
@@ -20,11 +20,15 @@ const STATUS_CONFIG = {
     CANCELLED: { icon: XCircle, color: 'cancelled', label: 'Cancelled' }
   },
   payment: {
-    SUCCESS: { icon: CheckCircle, color: 'success', label: 'Success' },
+    SUCCESS: { icon: CheckCircle, color: 'success', label: 'Paid' },
     PENDING: { icon: Clock, color: 'pending', label: 'Pending' },
-    FAILED: { icon: AlertCircle, color: 'failed', label: 'Failed' }
+    FAILED: { icon: AlertCircle, color: 'failed', label: 'Failed' },
+    COD_PENDING: { icon: Banknote, color: 'cod-pending', label: 'COD - Awaiting' }
   }
 };
+
+// COD Payment status options (what admin can update COD orders to)
+const COD_PAYMENT_STATUSES = ['SUCCESS', 'COD_PENDING'];
 
 const DATE_FILTERS = [
   { value: 'ALL', label: 'All Time', icon: Calendar },
@@ -50,6 +54,16 @@ const getStatusConfig = (type, status) => {
     color: 'unknown',
     label: normalizedStatus.charAt(0) + normalizedStatus.slice(1).toLowerCase()
   };
+};
+
+// Check if an order is a COD order (checks payment_id prefix)
+const isCODOrder = (paymentId) => {
+  return paymentId && paymentId.toString().startsWith('COD-');
+};
+
+// Check if payment status can be updated (only COD orders)
+const canUpdatePaymentStatus = (paymentId) => {
+  return isCODOrder(paymentId);
 };
 
 const formatCurrency = (amount) => {
@@ -147,7 +161,7 @@ const StatsCard = memo(({ icon: Icon, label, value, color, onClick, isActive }) 
   </button>
 ));
 
-// Payment Status Badge (Read-only)
+// Payment Status Badge (Read-only for non-COD orders)
 const PaymentStatusBadge = memo(({ status }) => {
   const config = getStatusConfig('payment', status);
   const Icon = config.icon;
@@ -161,6 +175,143 @@ const PaymentStatusBadge = memo(({ status }) => {
       <span>{config.label}</span>
     </div>
   );
+});
+
+// NEW: Payment Status Dropdown (Only for COD orders)
+const PaymentStatusDropdown = memo(({ status, orderId, onUpdate, isLoading }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const triggerRef = useRef(null);
+  
+  const config = getStatusConfig('payment', status);
+  const Icon = config.icon;
+
+  const handleStatusChange = useCallback((newStatus) => {
+    onUpdate(orderId, newStatus);
+    setIsOpen(false);
+  }, [orderId, onUpdate]);
+
+  const handleKeyDown = useCallback((e, newStatus) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleStatusChange(newStatus);
+    }
+  }, [handleStatusChange]);
+
+  // Handle click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
+  const handleItemClick = useCallback((e, newStatus) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleStatusChange(newStatus);
+  }, [handleStatusChange]);
+
+  const handleToggle = useCallback((e) => {
+    e.stopPropagation();
+    if (!isLoading) {
+      setIsOpen(prev => !prev);
+    }
+  }, [isLoading]);
+
+  return (
+    <div 
+      ref={dropdownRef}
+      className={`apm-status-dropdown apm-status-dropdown--payment ${isOpen ? 'is-open' : ''}`}
+    >
+      <button 
+        ref={triggerRef}
+        className={`apm-badge apm-badge--${config.color} apm-badge--clickable apm-badge--cod ${isLoading ? 'apm-badge--loading' : ''}`}
+        onClick={handleToggle}
+        disabled={isLoading}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        type="button"
+        title="Click to mark as paid"
+      >
+        <Icon size={14} />
+        <span>{isLoading ? 'Updating...' : config.label}</span>
+        {!isLoading && (
+          <ChevronDown 
+            size={14} 
+            className={`apm-badge__chevron ${isOpen ? 'apm-badge__chevron--rotated' : ''}`} 
+          />
+        )}
+      </button>
+          
+    {isOpen && (
+      <div className="apm-status-dropdown__menu is-open" role="listbox">
+        {COD_PAYMENT_STATUSES
+          .filter(s => normalizeStatus(s) !== normalizeStatus(status))
+          .map(s => {
+            const statusConfig = getStatusConfig('payment', s);
+            const StatusIcon = statusConfig.icon;
+            return (
+              <button
+                key={s}
+                onClick={(e) => handleItemClick(e, s)}
+                onKeyDown={(e) => handleKeyDown(e, s)}
+                disabled={isLoading}
+                className={`apm-status-dropdown__item apm-status-dropdown__item--${statusConfig.color}`}
+                role="option"
+                type="button"
+              >
+                <StatusIcon size={16} />
+                <span>Mark as {statusConfig.label}</span>
+              </button>
+            );
+          })}
+      </div>
+    )}
+    </div>
+  );
+});
+
+// NEW: Smart Payment Status Component (Decides between Badge and Dropdown)
+const PaymentStatus = memo(({ status, orderId, paymentId, onUpdate, isLoading }) => {
+  // Only show dropdown for COD orders (can update anytime)
+  if (canUpdatePaymentStatus(paymentId)) {
+    return (
+      <PaymentStatusDropdown
+        status={status}
+        orderId={orderId}
+        onUpdate={onUpdate}
+        isLoading={isLoading}
+      />
+    );
+  }
+  
+  // Show read-only badge for online payment orders
+  return <PaymentStatusBadge status={status} />;
 });
 
 // Order Status Dropdown
@@ -290,7 +441,9 @@ const OrderCard = memo(({
   onViewDetails, 
   onDelete, 
   onUpdateStatus,
-  isUpdating 
+  onUpdatePaymentStatus, // NEW
+  isUpdating,
+  isUpdatingPayment // NEW
 }) => {
   const totalAmount = useMemo(() => {
     if (!order.product_list || !Array.isArray(order.product_list)) return 0;
@@ -298,9 +451,18 @@ const OrderCard = memo(({
   }, [order.product_list]);
 
   const itemCount = order.product_list?.length || 0;
+  const isCOD = isCODOrder(order.payment_id);
 
   return (
-    <article className={`apm-order-card ${isSelected ? 'apm-order-card--selected' : ''}`}>
+    <article className={`apm-order-card ${isSelected ? 'apm-order-card--selected' : ''} ${isCOD ? 'apm-order-card--cod' : ''}`}>
+      {/* COD Badge */}
+      {isCOD && (
+        <div className="apm-order-card__cod-indicator">
+          <Banknote size={14} />
+          <span>Cash on Delivery</span>
+        </div>
+      )}
+
       <div className="apm-order-card__header">
         <div className="apm-order-card__selection">
           <label className="apm-checkbox">
@@ -332,7 +494,14 @@ const OrderCard = memo(({
         </div>
 
         <div className="apm-order-card__status-group">
-          <PaymentStatusBadge status={order.payment_status} />
+          {/* Smart Payment Status - Dropdown for COD, Badge for others */}
+          <PaymentStatus
+            status={order.payment_status}
+            orderId={order.id}
+            paymentId={order.payment_id}
+            onUpdate={onUpdatePaymentStatus}
+            isLoading={isUpdatingPayment}
+          />
           <OrderStatusDropdown
             status={order.order_status}
             orderId={order.id}
@@ -406,8 +575,10 @@ const OrderCard = memo(({
 const OrderDetailsModal = memo(({ 
   order, 
   onClose, 
-  onUpdateStatus, 
-  isUpdating 
+  onUpdateStatus,
+  onUpdatePaymentStatus, // NEW
+  isUpdating,
+  isUpdatingPayment // NEW
 }) => {
   // ✅ Move ALL hooks BEFORE any conditional returns
   
@@ -445,6 +616,8 @@ const OrderDetailsModal = memo(({
   // ✅ NOW we can have conditional return (after all hooks)
   if (!order) return null;
 
+  const isCOD = isCODOrder(order.payment_id);
+
   return (
     <div 
       className="apm-modal-overlay" 
@@ -458,6 +631,12 @@ const OrderDetailsModal = memo(({
           <h2 id="modal-title" className="apm-modal__title">
             <Package size={24} />
             Order #{order.id}
+            {isCOD && (
+              <span className="apm-modal__cod-badge">
+                <Banknote size={16} />
+                COD
+              </span>
+            )}
           </h2>
           <button 
             onClick={onClose}
@@ -545,9 +724,19 @@ const OrderDetailsModal = memo(({
               <div className="apm-status-group">
                 <label className="apm-status-group__label">Payment Status</label>
                 <div className="apm-status-group__content">
-                  <PaymentStatusBadge status={order.payment_status} />
+                  {/* Smart Payment Status */}
+                  <PaymentStatus
+                    status={order.payment_status}
+                    orderId={order.id}
+                    paymentId={order.payment_id}
+                    onUpdate={onUpdatePaymentStatus}
+                    isLoading={isUpdatingPayment}
+                  />
                   <small className="apm-status-group__hint">
-                    Payment status is managed by the payment gateway
+                    {isCOD 
+                      ? 'Click to mark as paid when cash is received'
+                      : 'Payment status is managed by the payment gateway'
+                    }
                   </small>
                 </div>
               </div>
@@ -586,6 +775,22 @@ const OrderDetailsModal = memo(({
                 <span className="apm-detail-item__label">Payment ID</span>
                 <span className="apm-detail-item__value apm-detail-item__value--mono">
                   {order.payment_id || 'N/A'}
+                </span>
+              </div>
+              <div className="apm-detail-item">
+                <span className="apm-detail-item__label">Payment Method</span>
+                <span className="apm-detail-item__value">
+                  {order.payment_id?.startsWith('COD-') ? (
+                    <span className="apm-payment-method apm-payment-method--cod">
+                      <Banknote size={14} />
+                      Cash on Delivery
+                    </span>
+                  ) : (
+                    <span className="apm-payment-method apm-payment-method--online">
+                      <CreditCard size={14} />
+                      Online Payment
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="apm-detail-item">
@@ -772,6 +977,7 @@ export default function AdminProductManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedOrders, setSelectedOrders] = useState(new Set());
   const [updatingOrders, setUpdatingOrders] = useState(new Set());
+  const [updatingPayments, setUpdatingPayments] = useState(new Set()); // NEW: Track payment updates
   const [currentPage, setCurrentPage] = useState(1);
 
   // Filter state
@@ -968,6 +1174,11 @@ export default function AdminProductManagement() {
       return acc;
     }, {});
 
+  // Count COD orders with pending payment
+  const codPendingCount = filteredOrders.filter(order => 
+    isCODOrder(order.payment_id) && normalizeStatus(order.payment_status) === 'COD_PENDING'
+  ).length;
+
     const totalRevenue = filteredOrders.reduce((total, order) => {
       if (order.product_list && Array.isArray(order.product_list)) {
         return total + order.product_list.reduce((sum, item) => 
@@ -988,7 +1199,7 @@ export default function AdminProductManagement() {
       return groups;
     }, {});
 
-    return { statusCounts, totalRevenue, groupedOrders };
+    return { statusCounts, totalRevenue, groupedOrders, codPendingCount };
   }, [filteredOrders]);
 
   // Pagination
@@ -1082,6 +1293,64 @@ export default function AdminProductManagement() {
       });
     }
   }, [showNotification]);
+
+  // ============================================
+  // NEW: PAYMENT STATUS UPDATE (COD ONLY)
+  // ============================================
+  const updatePaymentStatus = useCallback(async (orderId, newStatus) => {
+    // Find the order to check if it's COD
+    const order = orders.find(o => o.id === orderId);
+    
+    if (!order) {
+      showNotification('Order not found', 'error');
+      return;
+    }
+
+    // Verify this is a COD order
+    if (!isCODOrder(order.payment_id)) {
+      showNotification('Payment status can only be updated for COD orders', 'error');
+      return;
+    }
+
+    setUpdatingPayments(prev => new Set([...prev, orderId]));
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: newStatus.toUpperCase() })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { ...order, payment_status: newStatus.toUpperCase() } 
+          : order
+      ));
+
+      // Update modal order if open
+      setModals(prev => ({
+        ...prev,
+        orderDetails: prev.orderDetails.order?.id === orderId 
+          ? { 
+              ...prev.orderDetails, 
+              order: { ...prev.orderDetails.order, payment_status: newStatus.toUpperCase() } 
+            }
+          : prev.orderDetails
+      }));
+
+      showNotification(`Payment received! Status updated to Paid`, 'success');
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      showNotification('Failed to update payment status', 'error');
+    } finally {
+      setUpdatingPayments(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
+    }
+  }, [orders, showNotification]);
 
   // ============================================
   // DELETE HANDLERS
@@ -1241,6 +1510,13 @@ export default function AdminProductManagement() {
               {analytics.statusCounts.PROCESSING > 0 && (
                 <span className="apm-header__stat apm-header__stat--warning">
                   {analytics.statusCounts.PROCESSING} processing
+                </span>
+              )}
+              {/* NEW: COD Pending indicator */}
+              {analytics.codPendingCount > 0 && (
+                <span className="apm-header__stat apm-header__stat--cod">
+                  <Banknote size={14} />
+                  {analytics.codPendingCount} COD awaiting payment
                 </span>
               )}
             </div>
@@ -1444,7 +1720,9 @@ export default function AdminProductManagement() {
                   onViewDetails={openOrderDetails}
                   onDelete={openDeleteConfirm}
                   onUpdateStatus={updateOrderStatus}
+                  onUpdatePaymentStatus={updatePaymentStatus}
                   isUpdating={updatingOrders.has(order.id)}
+                  isUpdatingPayment={updatingPayments.has(order.id)}
                 />
               ))}
             </div>
@@ -1464,7 +1742,9 @@ export default function AdminProductManagement() {
           order={modals.orderDetails.order}
           onClose={closeOrderDetails}
           onUpdateStatus={updateOrderStatus}
+          onUpdatePaymentStatus={updatePaymentStatus}
           isUpdating={updatingOrders.has(modals.orderDetails.order?.id)}
+          isUpdatingPayment={updatingPayments.has(modals.orderDetails.order?.id)}
         />
       )}
 
