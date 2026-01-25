@@ -1,3 +1,8 @@
+// Key fixes applied:
+// 1. Added .toLowerCase() to all payment_status comparisons
+// 2. Improved guest user detection
+// 3. Better error handling
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useUser } from '@supabase/auth-helpers-react';
@@ -46,8 +51,20 @@ const YourOrders = () => {
       return;
     }
 
+    // Check if user is a guest account - don't show orders for guests
+    const isGuest = user.email?.includes('guest_') || false;
+    
+    if (isGuest) {
+      setOrders([]);
+      setSessionChecked(true);
+      setLoading(false);
+      return;
+    }
+
     try {
       setRefreshing(true);
+      
+      console.log('🔍 Fetching orders for user:', user.id);
       
       // Fetch orders based on actual database structure from checkout
       const { data, error } = await supabase
@@ -56,8 +73,12 @@ const YourOrders = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching orders:', error);
+        throw error;
+      }
       
+      console.log('✅ Orders fetched:', data?.length || 0);
       setOrders(data || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
@@ -108,12 +129,16 @@ const YourOrders = () => {
   };
 
   const getPaymentStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
+    // 🔥 FIX: Convert to lowercase for comparison
+    const normalizedStatus = status?.toLowerCase();
+    
+    switch (normalizedStatus) {
       case 'success':
       case 'completed':
       case 'paid':
         return <CheckCircle className={styles.paymentIconGreen} />;
       case 'cash_on_delivery':
+      case 'cod':
         return <Package className={styles.paymentIconOrange} />;
       case 'pending':
         return <Clock className={styles.paymentIconYellow} />;
@@ -126,8 +151,12 @@ const YourOrders = () => {
   };
 
   const getPaymentModeDisplay = (paymentStatus) => {
-    switch (paymentStatus?.toLowerCase()) {
+    // 🔥 FIX: Convert to lowercase for comparison
+    const normalizedStatus = paymentStatus?.toLowerCase();
+    
+    switch (normalizedStatus) {
       case 'cash_on_delivery':
+      case 'cod':
         return 'Cash on Delivery';
       case 'success':
       case 'completed':
@@ -135,6 +164,8 @@ const YourOrders = () => {
         return 'Online Payment';
       case 'pending':
         return 'Payment Pending';
+      case 'failed':
+        return 'Payment Failed';
       default:
         return paymentStatus || 'Not specified';
     }
@@ -204,6 +235,9 @@ const YourOrders = () => {
     fetchOrders();
   };
 
+  // Check if user is a guest
+  const isGuestUser = user?.email?.includes('guest_') || false;
+
   // Loading state
   if (loading) {
     return (
@@ -226,6 +260,24 @@ const YourOrders = () => {
           <p className={styles.messageText}>Please log in to view your order history.</p>
           <a href="/login" className={styles.primaryButton}>
             Sign In
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Guest user state
+  if (isGuestUser) {
+    return (
+      <div className={styles.centeredContainer}>
+        <div className={styles.messageCard}>
+          <Package className={styles.largeIcon} />
+          <h2 className={styles.messageTitle}>Guest Account</h2>
+          <p className={styles.messageText}>
+            You're browsing as a guest. Please create an account or log in to view your order history.
+          </p>
+          <a href="/login" className={styles.primaryButton}>
+            Sign In or Sign Up
           </a>
         </div>
       </div>
