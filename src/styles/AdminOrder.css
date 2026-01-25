@@ -1658,3 +1658,175 @@
 .apm-status-dropdown__item--neutral {
   color: #374151;
 }
+/* ============================================
+   COD SPECIFIC STYLES
+   ============================================ */
+
+/* COD Badge Color */
+.apm-badge--cod-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.apm-badge--cod-pending:hover {
+  background-color: #fde68a;
+}
+
+/* COD Clickable Badge */
+.apm-badge--cod {
+  cursor: pointer;
+  position: relative;
+}
+
+.apm-badge--cod::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px dashed #f59e0b;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.apm-badge--cod:hover::after {
+  opacity: 1;
+}
+
+/* COD Order Card Indicator */
+.apm-order-card--cod {
+  position: relative;
+  border-left: 4px solid #f59e0b;
+}
+
+.apm-order-card__cod-indicator {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 0 8px 0 8px;
+}
+
+/* COD Badge in Modal Header */
+.apm-modal__cod-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+}
+
+/* Payment Method Display */
+.apm-payment-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.apm-payment-method--cod {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.apm-payment-method--online {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Header COD Stat */
+.apm-header__stat--cod {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Payment Status Dropdown Styling */
+.apm-status-dropdown--payment .apm-status-dropdown__menu {
+  min-width: 180px;
+}
+
+.apm-status-dropdown--payment .apm-status-dropdown__item--success {
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+
+.apm-status-dropdown--payment .apm-status-dropdown__item--success:hover {
+  background-color: #d1fae5;
+}
+
+/* Pulse animation for COD awaiting payment */
+@keyframes cod-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+}
+
+.apm-badge--cod-pending.apm-badge--clickable {
+  animation: cod-pulse 2s infinite;
+}
+
+.apm-badge--cod-pending.apm-badge--clickable:hover {
+  animation: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .apm-order-card__cod-indicator {
+    font-size: 10px;
+    padding: 3px 8px;
+  }
+  
+  .apm-order-card__cod-indicator svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .apm-modal__cod-badge {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  
+  .apm-header__stat--cod {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .apm-order-card__cod-indicator span {
+    display: none;
+  }
+  
+  .apm-order-card__cod-indicator {
+    padding: 6px;
+    border-radius: 0 8px 0 6px;
+  }
+}
+
