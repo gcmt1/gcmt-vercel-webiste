@@ -14,6 +14,7 @@ const HomepageProductCard = ({ productId }) => {
   const [error, setError] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,26 +31,36 @@ const HomepageProductCard = ({ productId }) => {
         setError('Could not load product.');
       } else {
         let imageUrl = DefaultProductImage;
+        let rawImagePath = data.product_image || '';
         if (data.product_image) {
+          // Handle comma-separated images — take the first one
+          let firstImage = data.product_image;
+          if (data.product_image.includes(',')) {
+            firstImage = data.product_image.split(',')[0].trim();
+          }
           const { data: imageData, error: imageError } = supabase
             .storage
             .from('product-image')
-            .getPublicUrl(data.product_image);
+            .getPublicUrl(firstImage);
           if (!imageError && imageData && imageData.publicUrl) {
             imageUrl = imageData.publicUrl;
           }
+          rawImagePath = firstImage;
         }
 
         const productData = {
           id: data.id,
           name: data.product_name,
           shortDescription: data.product_sub_description,
-          price: Number(data.product_price).toFixed(2),
+          price: Number(data.product_price),
+          priceFormatted: Number(data.product_price).toFixed(2),
           discount: data.product_discount ? `${data.product_discount}%` : null,
+          discountValue: data.product_discount || 0,
           discountPrice: data.product_discount
-            ? (data.product_price * (1 - data.product_discount / 100)).toFixed(2)
+            ? +(data.product_price * (1 - data.product_discount / 100)).toFixed(2)
             : null,
           image: imageUrl,
+          rawImagePath: rawImagePath,
           category: data.category,
           rating: data.rating || 4.5,
           inStock: data.in_stock !== false,
@@ -61,30 +72,113 @@ const HomepageProductCard = ({ productId }) => {
     fetchProduct();
   }, [productId]);
 
-  const handleBuyNow = (e) => {
+  const handleBuyNow = async (e) => {
     e.stopPropagation();
     if (!product || !product.inStock) return;
 
-    // Build cart item matching checkout expectations
-    const cartItem = {
-      product_id: product.id,
-      quantity: 1,
-    };
+    try {
+      setBuyNowLoading(true);
 
-    // Store as a single-item cart so checkout picks it up
-    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const alreadyIndex = existingCart.findIndex(
-      (item) => item.product_id === product.id
-    );
-    if (alreadyIndex > -1) {
-      existingCart[alreadyIndex].quantity += 1;
-    } else {
-      existingCart.push(cartItem);
+      // Check for authenticated user via Supabase
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (authUser) {
+        // ===== LOGGED-IN USER FLOW =====
+        // Checkout reads from 'cart_items' table with:
+        // supabase.from('cart_items').select('id, product_id, quantity, products:products(...)').eq('user_id', user.id)
+
+        // Check if this product already exists in cart
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', authUser.id)
+          .eq('product_id', product.id);
+
+        if (fetchError) {
+          console.error('Error checking cart:', fetchError);
+          throw new Error('Failed to check cart');
+        }
+
+        if (existingItems && existingItems.length > 0) {
+          // Product already in cart - update quantity
+          const existingItem = existingItems[0];
+          const newQuantity = existingItem.quantity + 1;
+
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('id', existingItem.id);
+
+          if (updateError) {
+            console.error('Error updating cart item:', updateError);
+            throw new Error('Failed to update cart');
+          }
+
+          console.log('✅ Updated cart item quantity:', newQuantity);
+        } else {
+          // Product not in cart - insert new item
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: authUser.id,
+              product_id: product.id,
+              quantity: 1,
+            });
+
+          if (insertError) {
+            console.error('Error inserting cart item:', insertError);
+            throw new Error('Failed to add to cart');
+          }
+
+          console.log('✅ Added new item to cart_items');
+        }
+
+        // Navigate to checkout
+        navigate('/checkout');
+
+      } else {
+        // ===== GUEST USER FLOW =====
+        // Checkout reads guest cart from: JSON.parse(sessionStorage.getItem('guest_cart')) || []
+        // Expected format per item: { id, productId, name, price, image, quantity }
+
+        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
+
+        // Check if product already exists in guest cart
+        const existingIndex = guestCart.findIndex(
+          item => item.productId === product.id
+        );
+
+        if (existingIndex !== -1) {
+          // Update quantity of existing item
+          guestCart[existingIndex].quantity += 1;
+          console.log('✅ Updated guest cart item quantity:', guestCart[existingIndex].quantity);
+        } else {
+          // Add new item matching the format Checkout expects
+          guestCart.push({
+            id: `guest_${product.id}_${Date.now()}`,
+            productId: product.id,
+            name: product.name,
+            price: product.discountPrice || product.price,
+            image: product.rawImagePath,
+            quantity: 1,
+          });
+
+          console.log('✅ Added new item to guest cart');
+        }
+
+        // Save back to sessionStorage
+        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
+
+        // Navigate to checkout
+        navigate('/checkout');
+      }
+
+    } catch (err) {
+      console.error('Buy Now error:', err);
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBuyNowLoading(false);
     }
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-
-    // Navigate to checkout
-    navigate('/checkout');
   };
 
   const handleCardClick = () => {
@@ -210,12 +304,12 @@ const HomepageProductCard = ({ productId }) => {
                   ₹{product.discountPrice}
                 </span>
                 <span className="hp-product-card__price--original">
-                  ₹{product.price}
+                  ₹{product.priceFormatted}
                 </span>
               </>
             ) : (
               <span className="hp-product-card__price--current">
-                ₹{product.price}
+                ₹{product.priceFormatted}
               </span>
             )}
           </div>
@@ -229,10 +323,16 @@ const HomepageProductCard = ({ productId }) => {
         <button
           className="hp-product-card__buy-now-btn"
           onClick={handleBuyNow}
-          disabled={!product.inStock}
+          disabled={!product.inStock || buyNowLoading}
         >
-          <ShoppingBag size={16} />
-          <span>{product.inStock ? 'Buy Now' : 'Out of Stock'}</span>
+          {buyNowLoading ? (
+            <span>Adding...</span>
+          ) : (
+            <>
+              <ShoppingBag size={16} />
+              <span>{product.inStock ? 'Buy Now' : 'Out of Stock'}</span>
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -245,6 +345,7 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [shopNowLoading, setShopNowLoading] = useState(false);
   const navigate = useNavigate();
 
   const testimonials = [
@@ -337,6 +438,130 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [testimonials.length]);
 
+  // "Shop Now" handler — works exactly like the Buy Now button on ProductDetail page
+  const handleShopNow = async () => {
+    if (products.length === 0) {
+      // Fallback: if products haven't loaded yet, just go to products page
+      navigate('/products');
+      return;
+    }
+
+    // Pick the first available (in-stock) product
+    const firstProduct = products.find((p) => p.in_stock !== false) || products[0];
+
+    try {
+      setShopNowLoading(true);
+
+      // Get the first image path from the product
+      let firstImagePath = firstProduct.product_image || '';
+      if (firstImagePath.includes(',')) {
+        firstImagePath = firstImagePath.split(',')[0].trim();
+      }
+
+      // Calculate discount price if applicable
+      const discountPrice = firstProduct.product_discount
+        ? +(firstProduct.product_price * (1 - firstProduct.product_discount / 100)).toFixed(2)
+        : null;
+
+      // Check for authenticated user via Supabase
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (authUser) {
+        // ===== LOGGED-IN USER FLOW =====
+        // Check if this product already exists in cart
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', authUser.id)
+          .eq('product_id', firstProduct.id);
+
+        if (fetchError) {
+          console.error('Error checking cart:', fetchError);
+          throw new Error('Failed to check cart');
+        }
+
+        if (existingItems && existingItems.length > 0) {
+          // Product already in cart - update quantity
+          const existingItem = existingItems[0];
+          const newQuantity = existingItem.quantity + 1;
+
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('id', existingItem.id);
+
+          if (updateError) {
+            console.error('Error updating cart item:', updateError);
+            throw new Error('Failed to update cart');
+          }
+
+          console.log('✅ Updated cart item quantity:', newQuantity);
+        } else {
+          // Product not in cart - insert new item
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: authUser.id,
+              product_id: firstProduct.id,
+              quantity: 1,
+            });
+
+          if (insertError) {
+            console.error('Error inserting cart item:', insertError);
+            throw new Error('Failed to add to cart');
+          }
+
+          console.log('✅ Added new item to cart_items');
+        }
+
+        // Navigate to checkout
+        navigate('/checkout');
+
+      } else {
+        // ===== GUEST USER FLOW =====
+        // Checkout reads guest cart from: JSON.parse(sessionStorage.getItem('guest_cart')) || []
+        // Expected format per item: { id, productId, name, price, image, quantity }
+
+        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
+
+        // Check if product already exists in guest cart
+        const existingIndex = guestCart.findIndex(
+          item => item.productId === firstProduct.id
+        );
+
+        if (existingIndex !== -1) {
+          // Update quantity of existing item
+          guestCart[existingIndex].quantity += 1;
+          console.log('✅ Updated guest cart item quantity:', guestCart[existingIndex].quantity);
+        } else {
+          // Add new item matching the format Checkout expects
+          guestCart.push({
+            id: `guest_${firstProduct.id}_${Date.now()}`,
+            productId: firstProduct.id,
+            name: firstProduct.product_name,
+            price: discountPrice || firstProduct.product_price,
+            image: firstImagePath,
+            quantity: 1,
+          });
+
+          console.log('✅ Added new item to guest cart');
+        }
+
+        // Save back to sessionStorage
+        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
+
+        // Navigate to checkout
+        navigate('/checkout');
+      }
+
+    } catch (err) {
+      console.error('Shop Now error:', err);
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setShopNowLoading(false);
+    }
+  };
+
   return (
     <div className="hp-homepage">
       {/* Announcement Bar */}
@@ -373,9 +598,10 @@ const HomePage = () => {
               <div className="hp-hero-buttons">
                 <button
                   className="hp-btn-primary"
-                  onClick={() => navigate('/products')}
+                  onClick={handleShopNow}
+                  disabled={shopNowLoading}
                 >
-                  Shop Now <ArrowRight size={18} />
+                  {shopNowLoading ? 'Adding...' : 'Shop Now'} <ArrowRight size={18} />
                 </button>
                 <button
                   className="hp-btn-secondary"
