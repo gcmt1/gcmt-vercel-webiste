@@ -5,7 +5,7 @@ import {
   ArrowLeft, ArrowRight, Check, ChevronDown, ChevronUp,
   X, Copy, MessageCircle, Facebook, Twitter, Mail, Link,
   Package, Shield, Truck, RotateCcw, ZoomIn, Minus, Plus,
-  ChevronLeft, Home, Award, Leaf, Sparkles
+  ChevronLeft, Home, Award, Leaf, Sparkles, Zap
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import '../styles/ProductDetails.css';
@@ -31,12 +31,13 @@ const ProductDetail = () => {
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [expandedAccordion, setExpandedAccordion] = useState('description');
-  
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
+
   const mainImageRef = useRef(null);
   const productInfoRef = useRef(null);
   const galleryRef = useRef(null);
+  const actionsRef = useRef(null);
 
-  // Touch swipe for mobile gallery
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const minSwipeDistance = 50;
@@ -55,37 +56,32 @@ const ProductDetail = () => {
 
         if (prodErr) throw prodErr;
 
-        // Process variants/sizes
-        const variants = prodData.size 
+        const variants = prodData.size
           ? prodData.size.split(',').map(v => v.trim()).filter(v => v)
           : [];
 
-        // Process key benefits - handle Postgres array format
         const rawBenefits = prodData.key_benefits || '';
         const cleanedBenefits = rawBenefits.replace(/[\{\}"]/g, '');
-        const benefits = cleanedBenefits 
+        const benefits = cleanedBenefits
           ? cleanedBenefits.split(',').map(b => b.trim()).filter(b => b)
           : [];
 
-        // Process ingredients
         const ingredientNames = prodData.ingredients_name
           ? prodData.ingredients_name.split(',').map(n => n.trim()).filter(n => n)
           : [];
         const percentages = prodData.percentage
           ? prodData.percentage.split(',').map(p => p.trim())
           : [];
-        
+
         const ingredients = ingredientNames.map((name, i) => ({
           name,
           percentage: percentages[i] || ''
         }));
 
-        // Calculate discount price
-        const discountPrice = prodData.product_discount 
+        const discountPrice = prodData.product_discount
           ? +(prodData.product_price * (1 - prodData.product_discount / 100)).toFixed(2)
           : null;
 
-        // Process multiple images
         let images = [];
         if (prodData.product_image) {
           if (prodData.product_image.includes(',')) {
@@ -126,6 +122,12 @@ const ProductDetail = () => {
           howToUseHeading: prodData.how_to_use_heading || '',
           howToUseDescription: prodData.how_to_use_description || '',
           proTips: prodData.pro_tips || '',
+          // Keep raw data for cart insertion
+          _raw: {
+            product_name: prodData.product_name,
+            product_price: prodData.product_price,
+            product_image: prodData.product_image || '',
+          }
         };
 
         setProduct(productData);
@@ -145,20 +147,18 @@ const ProductDetail = () => {
     }
   }, [id]);
 
-  // Scroll listener for mobile sticky actions
   useEffect(() => {
     const handleScroll = () => {
-      if (productInfoRef.current) {
-        const rect = productInfoRef.current.getBoundingClientRect();
+      if (actionsRef.current) {
+        const rect = actionsRef.current.getBoundingClientRect();
         setShowMobileActions(rect.bottom < 0);
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Touch handlers for swipe
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -173,7 +173,7 @@ const ProductDetail = () => {
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
-    
+
     if (isLeftSwipe && product?.images?.length > 1) {
       setActiveImage(prev => (prev + 1) % product.images.length);
     }
@@ -182,16 +182,128 @@ const ProductDetail = () => {
     }
   };
 
-  // Image zoom handler
   const handleMouseMove = useCallback((e) => {
     if (!mainImageRef.current || !isZoomed) return;
-    
+
     const rect = mainImageRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     setZoomPosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
   }, [isZoomed]);
+
+  // ==================== BUY NOW HANDLER ====================
+  // This mirrors exactly how Checkout.jsx reads cart items
+  const handleBuyNow = async () => {
+    try {
+      setBuyNowLoading(true);
+
+      // Check for authenticated user via Supabase
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (authUser) {
+        // ===== LOGGED-IN USER FLOW =====
+        // Checkout reads from 'cart_items' table with:
+        // supabase.from('cart_items').select('id, product_id, quantity, products:products(...)').eq('user_id', user.id)
+        
+        // Check if this product already exists in cart
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', authUser.id)
+          .eq('product_id', product.id);
+
+        if (fetchError) {
+          console.error('Error checking cart:', fetchError);
+          throw new Error('Failed to check cart');
+        }
+
+        if (existingItems && existingItems.length > 0) {
+          // Product already in cart - update quantity
+          const existingItem = existingItems[0];
+          const newQuantity = existingItem.quantity + quantity;
+          
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('id', existingItem.id);
+
+          if (updateError) {
+            console.error('Error updating cart item:', updateError);
+            throw new Error('Failed to update cart');
+          }
+          
+          console.log('✅ Updated cart item quantity:', newQuantity);
+        } else {
+          // Product not in cart - insert new item
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: authUser.id,
+              product_id: product.id,
+              quantity: quantity,
+            });
+
+          if (insertError) {
+            console.error('Error inserting cart item:', insertError);
+            throw new Error('Failed to add to cart');
+          }
+          
+          console.log('✅ Added new item to cart_items');
+        }
+
+        // Navigate to checkout
+        navigate('/checkout');
+
+      } else {
+        // ===== GUEST USER FLOW =====
+        // Checkout reads guest cart from: JSON.parse(sessionStorage.getItem('guest_cart')) || []
+        // Expected format per item: { id, productId, name, price, image, quantity }
+        
+        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
+        
+        // Check if product already exists in guest cart
+        const existingIndex = guestCart.findIndex(
+          item => item.productId === product.id
+        );
+
+        if (existingIndex !== -1) {
+          // Update quantity of existing item
+          guestCart[existingIndex].quantity += quantity;
+          console.log('✅ Updated guest cart item quantity:', guestCart[existingIndex].quantity);
+        } else {
+          // Add new item matching the format Checkout expects
+          // When Checkout fetches for guests, it reads these fields directly:
+          // item.id, item.productId, item.name, item.price, item.image, item.quantity
+          const firstImage = product.images[0] || '';
+          
+          guestCart.push({
+            id: `guest_${product.id}_${Date.now()}`,
+            productId: product.id,
+            name: product.name,
+            price: product.discountPrice || product.price,
+            image: firstImage,
+            quantity: quantity,
+          });
+          
+          console.log('✅ Added new item to guest cart');
+        }
+
+        // Save back to sessionStorage
+        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
+
+        // Navigate to checkout
+        navigate('/checkout');
+      }
+
+    } catch (err) {
+      console.error('Buy Now error:', err);
+      // Show a basic alert since we may not have toast context
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBuyNowLoading(false);
+    }
+  };
 
   // Share functionality
   const getProductUrl = () => window.location.href;
@@ -280,14 +392,14 @@ const ProductDetail = () => {
   };
 
   const renderStars = (rating) => (
-    <div className="stars-container">
+    <div className="pd-stars-container">
       {Array(5).fill(0).map((_, i) => {
         const fillPercent = Math.min(100, Math.max(0, (rating - i) * 100));
         return (
-          <div key={i} className="star-wrapper">
-            <Star size={18} stroke="#E5E7EB" fill="#E5E7EB" />
-            <div className="star-fill" style={{ width: `${fillPercent}%` }}>
-              <Star size={18} stroke="#F59E0B" fill="#F59E0B" />
+          <div key={i} className="pd-star-wrapper">
+            <Star size={16} stroke="#E5E7EB" fill="#E5E7EB" />
+            <div className="pd-star-fill" style={{ width: `${fillPercent}%` }}>
+              <Star size={16} stroke="#F59E0B" fill="#F59E0B" />
             </div>
           </div>
         );
@@ -324,7 +436,6 @@ const ProductDetail = () => {
     setExpandedAccordion(expandedAccordion === tab ? null : tab);
   };
 
-  // Calculate savings
   const getSavings = () => {
     if (product.discountPrice && product.price) {
       return (product.price - product.discountPrice).toFixed(2);
@@ -335,43 +446,43 @@ const ProductDetail = () => {
   // Loading State
   if (loading) {
     return (
-      <div className="product-page">
-        <div className="container">
-          <div className="skeleton-breadcrumb"></div>
-          <div className="product-main skeleton-main">
-            <div className="skeleton-gallery">
-              <div className="skeleton-main-image pulse"></div>
-              <div className="skeleton-thumbnails">
-                {[1,2,3,4].map(i => <div key={i} className="skeleton-thumb pulse"></div>)}
+      <div className="pd-page">
+        <div className="pd-container">
+          <div className="pd-skeleton-breadcrumb"></div>
+          <div className="pd-main pd-skeleton-main">
+            <div className="pd-skeleton-gallery">
+              <div className="pd-skeleton-main-image pd-pulse"></div>
+              <div className="pd-skeleton-thumbnails">
+                {[1, 2, 3, 4].map(i => <div key={i} className="pd-skeleton-thumb pd-pulse"></div>)}
               </div>
             </div>
-            <div className="skeleton-info">
-              <div className="skeleton-title pulse"></div>
-              <div className="skeleton-rating pulse"></div>
-              <div className="skeleton-desc pulse"></div>
-              <div className="skeleton-desc short pulse"></div>
-              <div className="skeleton-price pulse"></div>
-              <div className="skeleton-variants pulse"></div>
-              <div className="skeleton-actions pulse"></div>
-              <div className="skeleton-benefits pulse"></div>
+            <div className="pd-skeleton-info">
+              <div className="pd-skeleton-title pd-pulse"></div>
+              <div className="pd-skeleton-rating pd-pulse"></div>
+              <div className="pd-skeleton-desc pd-pulse"></div>
+              <div className="pd-skeleton-desc pd-short pd-pulse"></div>
+              <div className="pd-skeleton-price pd-pulse"></div>
+              <div className="pd-skeleton-variants pd-pulse"></div>
+              <div className="pd-skeleton-actions pd-pulse"></div>
+              <div className="pd-skeleton-benefits pd-pulse"></div>
             </div>
           </div>
         </div>
       </div>
     );
   }
-  
+
   if (error) {
     return (
-      <div className="product-page">
-        <div className="container">
-          <div className="error-container">
-            <div className="error-icon">
+      <div className="pd-page">
+        <div className="pd-container">
+          <div className="pd-error-container">
+            <div className="pd-error-icon">
               <X size={48} />
             </div>
             <h2>Oops! Something went wrong</h2>
             <p>{error}</p>
-            <button className="btn-primary" onClick={() => navigate(-1)}>
+            <button className="pd-btn-primary" onClick={() => navigate(-1)}>
               <ArrowLeft size={20} />
               Go Back
             </button>
@@ -383,15 +494,15 @@ const ProductDetail = () => {
 
   if (!product) {
     return (
-      <div className="product-page">
-        <div className="container">
-          <div className="error-container">
-            <div className="error-icon">
+      <div className="pd-page">
+        <div className="pd-container">
+          <div className="pd-error-container">
+            <div className="pd-error-icon">
               <Package size={48} />
             </div>
             <h2>Product Not Found</h2>
             <p>The product you're looking for doesn't exist or has been removed.</p>
-            <button className="btn-primary" onClick={() => navigate('/products')}>
+            <button className="pd-btn-primary" onClick={() => navigate('/products')}>
               <ArrowLeft size={20} />
               Browse Products
             </button>
@@ -452,40 +563,61 @@ const ProductDetail = () => {
         </script>
       </Helmet>
 
-      <div className="product-page">
-        <div className="container">
+      <div className="pd-page">
+        <div className="pd-container">
           {/* Breadcrumb Navigation */}
-          <nav className="breadcrumb" aria-label="Breadcrumb">
-            <ol className="breadcrumb-list">
-              <li className="breadcrumb-item">
-                <a href="/" className="breadcrumb-link">
+          <nav className="pd-breadcrumb" aria-label="Breadcrumb">
+            <ol className="pd-breadcrumb-list">
+              <li className="pd-breadcrumb-item">
+                <a href="/" className="pd-breadcrumb-link">
                   <Home size={14} />
                   <span>Home</span>
                 </a>
               </li>
-              <li className="breadcrumb-separator">
+              <li className="pd-breadcrumb-separator">
                 <ChevronRight size={14} />
               </li>
-              <li className="breadcrumb-item">
-                <a href="/products" className="breadcrumb-link">Products</a>
+              <li className="pd-breadcrumb-item">
+                <a href="/products" className="pd-breadcrumb-link">Products</a>
               </li>
-              <li className="breadcrumb-separator">
+              <li className="pd-breadcrumb-separator">
                 <ChevronRight size={14} />
               </li>
-              <li className="breadcrumb-item current">
+              <li className="pd-breadcrumb-item pd-current">
                 <span>{product.name}</span>
               </li>
             </ol>
           </nav>
 
           {/* Main Product Section */}
-          <div className="product-main">
+          <div className="pd-main">
             {/* Product Gallery */}
-            <section className="product-gallery" ref={galleryRef}>
-              <div className="gallery-container">
+            <section className="pd-gallery" ref={galleryRef}>
+              <div className="pd-gallery-container">
+                {/* Vertical Thumbnails - Desktop Only */}
+                {product.images.length > 1 && (
+                  <div className="pd-thumbnails-vertical">
+                    {product.images.map((img, index) => (
+                      <button
+                        key={index}
+                        className={`pd-thumbnail ${activeImage === index ? 'pd-active' : ''}`}
+                        onClick={() => handleThumbnailClick(index)}
+                        aria-label={`View image ${index + 1}`}
+                        aria-current={activeImage === index ? 'true' : 'false'}
+                      >
+                        <img
+                          src={img}
+                          alt={`${product.name} thumbnail ${index + 1}`}
+                          onError={handleImageError}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Main Image */}
-                <div 
-                  className={`main-image-wrapper ${isZoomed ? 'zoomed' : ''}`}
+                <div
+                  className={`pd-main-image-wrapper ${isZoomed ? 'pd-zoomed' : ''}`}
                   ref={mainImageRef}
                   onMouseEnter={() => setIsZoomed(true)}
                   onMouseLeave={() => setIsZoomed(false)}
@@ -494,14 +626,14 @@ const ProductDetail = () => {
                   onTouchMove={onTouchMove}
                   onTouchEnd={onTouchEnd}
                 >
-                  <div className={`image-loader ${imageLoaded ? 'hidden' : ''}`}>
-                    <div className="loader-spinner"></div>
+                  <div className={`pd-image-loader ${imageLoaded ? 'pd-hidden' : ''}`}>
+                    <div className="pd-loader-spinner"></div>
                   </div>
-                  
-                  <img 
-                    src={product.images[activeImage]} 
-                    alt={`${product.name} - Image ${activeImage + 1}`} 
-                    className={`main-image ${imageLoaded ? 'loaded' : ''}`}
+
+                  <img
+                    src={product.images[activeImage]}
+                    alt={`${product.name} - Image ${activeImage + 1}`}
+                    className={`pd-main-image ${imageLoaded ? 'pd-loaded' : ''}`}
                     onLoad={() => setImageLoaded(true)}
                     onError={handleImageError}
                     style={isZoomed ? {
@@ -510,17 +642,17 @@ const ProductDetail = () => {
                   />
 
                   {/* Badges */}
-                  <div className="image-badges">
+                  <div className="pd-image-badges">
                     {product.discount && (
-                      <span className="badge discount-badge">
+                      <span className="pd-badge pd-discount-badge">
                         <Sparkles size={12} />
                         {product.discount} OFF
                       </span>
                     )}
                   </div>
 
-                  {/* Zoom indicator */}
-                  <div className="zoom-indicator">
+                  {/* Zoom indicator - Desktop only */}
+                  <div className="pd-zoom-indicator">
                     <ZoomIn size={16} />
                     <span>Hover to zoom</span>
                   </div>
@@ -528,64 +660,58 @@ const ProductDetail = () => {
                   {/* Navigation Arrows */}
                   {product.images.length > 1 && (
                     <>
-                      <button 
-                        className="gallery-nav prev"
+                      <button
+                        className="pd-gallery-nav pd-prev"
                         onClick={() => handleImageNavigation('prev')}
                         aria-label="Previous image"
                       >
-                        <ChevronLeft size={24} />
+                        <ChevronLeft size={22} />
                       </button>
-                      <button 
-                        className="gallery-nav next"
+                      <button
+                        className="pd-gallery-nav pd-next"
                         onClick={() => handleImageNavigation('next')}
                         aria-label="Next image"
                       >
-                        <ChevronRight size={24} />
+                        <ChevronRight size={22} />
                       </button>
                     </>
                   )}
 
-                  {/* Image Counter */}
+                  {/* Image Counter - Mobile */}
                   {product.images.length > 1 && (
-                    <div className="image-counter">
+                    <div className="pd-image-counter">
                       <span>{activeImage + 1}</span>
-                      <span className="separator">/</span>
+                      <span className="pd-separator">/</span>
                       <span>{product.images.length}</span>
                     </div>
                   )}
-                </div>
 
-                {/* Thumbnail Strip */}
-                {product.images.length > 1 && (
-                  <div className="thumbnails-container">
-                    <div className="thumbnails-track">
-                      {product.images.map((img, index) => (
-                        <button
-                          key={index}
-                          className={`thumbnail ${activeImage === index ? 'active' : ''}`}
-                          onClick={() => handleThumbnailClick(index)}
-                          aria-label={`View image ${index + 1}`}
-                          aria-current={activeImage === index ? 'true' : 'false'}
-                        >
-                          <img 
-                            src={img} 
-                            alt={`${product.name} thumbnail ${index + 1}`}
-                            onError={handleImageError}
-                          />
-                          <div className="thumbnail-overlay"></div>
-                        </button>
-                      ))}
-                    </div>
+                  {/* Wishlist & Share buttons on image - Mobile */}
+                  <div className="pd-image-actions-mobile">
+                    <button
+                      className={`pd-img-action-btn ${wishlistAdded ? 'pd-active' : ''}`}
+                      onClick={addToWishlist}
+                      aria-label={wishlistAdded ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart size={20} fill={wishlistAdded ? "#EF4444" : "none"} stroke={wishlistAdded ? "#EF4444" : "currentColor"} />
+                    </button>
+                    <button
+                      className="pd-img-action-btn"
+                      onClick={handleShare}
+                      aria-label="Share product"
+                    >
+                      <Share2 size={20} />
+                    </button>
                   </div>
-                )}
+                </div>
 
                 {/* Dot Indicators for Mobile */}
                 {product.images.length > 1 && (
-                  <div className="image-dots">
+                  <div className="pd-image-dots">
                     {product.images.map((_, index) => (
                       <button
                         key={index}
-                        className={`dot ${activeImage === index ? 'active' : ''}`}
+                        className={`pd-dot ${activeImage === index ? 'pd-active' : ''}`}
                         onClick={() => handleThumbnailClick(index)}
                         aria-label={`Go to image ${index + 1}`}
                       />
@@ -596,151 +722,172 @@ const ProductDetail = () => {
             </section>
 
             {/* Product Information */}
-            <section className="product-info" ref={productInfoRef}>
+            <section className="pd-info" ref={productInfoRef}>
               {/* Product Header */}
-              <div className="product-header">
-                <h1 className="product-title">{product.name}</h1>
-                
-                <div className="product-meta">
-                  <div className="rating-section">
+              <div className="pd-header">
+                <h1 className="pd-title">{product.name}</h1>
+
+                <div className="pd-meta">
+                  <div className="pd-rating-section">
                     {renderStars(product.rating)}
-                    <span className="rating-value">{product.rating}</span>
-                    <span className="reviews-count">({product.reviews} Reviews)</span>
+                    <span className="pd-rating-value">{product.rating}</span>
+                    <span className="pd-reviews-count">({product.reviews} Reviews)</span>
                   </div>
-                  <span className="sku-info">SKU: {product.sku.slice(0, 8).toUpperCase()}</span>
+                  <span className="pd-sku-info">SKU: {product.sku.toString().slice(0, 8).toUpperCase()}</span>
                 </div>
 
                 {product.shortDescription && (
-                  <p className="product-subtitle">{product.shortDescription}</p>
+                  <p className="pd-subtitle">{product.shortDescription}</p>
                 )}
               </div>
 
               {/* Pricing Section */}
-              <div className="pricing-section">
-                <div className="price-wrapper">
+              <div className="pd-pricing">
+                <div className="pd-price-wrapper">
                   {product.discountPrice ? (
                     <>
-                      <span className="current-price">₹{product.discountPrice.toLocaleString('en-IN')}</span>
-                      <span className="original-price">₹{product.price.toLocaleString('en-IN')}</span>
-                      <span className="discount-tag">{product.discount} OFF</span>
+                      <span className="pd-current-price">₹{product.discountPrice.toLocaleString('en-IN')}</span>
+                      <span className="pd-original-price">₹{product.price.toLocaleString('en-IN')}</span>
+                      <span className="pd-discount-tag">{product.discount} OFF</span>
                     </>
                   ) : (
-                    <span className="current-price">₹{product.price.toLocaleString('en-IN')}</span>
+                    <span className="pd-current-price">₹{product.price.toLocaleString('en-IN')}</span>
                   )}
                 </div>
-                
+
                 {product.discountPrice && (
-                  <div className="savings-info">
+                  <div className="pd-savings-info">
                     <Award size={16} />
                     <span>You save ₹{getSavings()}</span>
                   </div>
                 )}
-                
-                <p className="tax-info">Inclusive of all taxes</p>
+
+                <p className="pd-tax-info">Inclusive of all taxes</p>
               </div>
 
               {/* Size/Variant Selection */}
               {product.variants.length > 0 && (
-                <div className="variants-section">
-                  <div className="section-header">
+                <div className="pd-variants">
+                  <div className="pd-section-header">
                     <h3>Select Size</h3>
                     {selectedVariant && (
-                      <span className="selected-variant">Selected: {selectedVariant}</span>
+                      <span className="pd-selected-variant">Selected: {selectedVariant}</span>
                     )}
                   </div>
-                  <div className="variant-options">
+                  <div className="pd-variant-options">
                     {product.variants.map((variant, index) => (
-                      <button 
+                      <button
                         key={index}
-                        className={`variant-btn ${selectedVariant === variant ? 'selected' : ''}`} 
+                        className={`pd-variant-btn ${selectedVariant === variant ? 'pd-selected' : ''}`}
                         onClick={() => setSelectedVariant(variant)}
                         aria-pressed={selectedVariant === variant}
                       >
                         {variant}
-                        {selectedVariant === variant && <Check size={14} className="check-icon" />}
+                        {selectedVariant === variant && <Check size={14} className="pd-check-icon" />}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Quantity & Actions */}
-              <div className="purchase-section">
-                <div className="quantity-wrapper">
-                  <span className="quantity-label">Quantity:</span>
-                  <div className="quantity-selector">
-                    <button 
-                      className="quantity-btn minus" 
+              {/* Quantity Selector */}
+              <div className="pd-quantity-section">
+                <span className="pd-quantity-label">Quantity:</span>
+                <div className="pd-quantity-controls">
+                  <div className="pd-quantity-selector">
+                    <button
+                      className="pd-qty-btn"
                       onClick={decreaseQuantity}
                       disabled={quantity <= 1}
                       aria-label="Decrease quantity"
                     >
-                      <Minus size={18} />
+                      <Minus size={16} />
                     </button>
-                    <input 
-                      type="number" 
-                      value={quantity} 
-                      readOnly 
+                    <input
+                      type="number"
+                      value={quantity}
+                      readOnly
                       aria-label="Product quantity"
-                      className="quantity-input"
+                      className="pd-qty-input"
                     />
-                    <button 
-                      className="quantity-btn plus" 
+                    <button
+                      className="pd-qty-btn"
                       onClick={increaseQuantity}
                       disabled={quantity >= product.stock}
                       aria-label="Increase quantity"
                     >
-                      <Plus size={18} />
+                      <Plus size={16} />
                     </button>
                   </div>
-                  <span className="stock-status in-stock">
-                    <span className="stock-dot"></span>
+                  <span className="pd-stock-status pd-in-stock">
+                    <span className="pd-stock-dot"></span>
                     In Stock
                   </span>
                 </div>
+              </div>
 
-                <div className="action-buttons">
-                  <AddToCartButton 
-                    productId={product.id} 
+              {/* Action Buttons */}
+              <div className="pd-action-buttons" ref={actionsRef}>
+                <div className="pd-primary-actions">
+                  <AddToCartButton
+                    productId={product.id}
                     quantity={quantity}
                     selectedVariant={selectedVariant}
-                    className="btn-add-cart"
+                    className="pd-btn-add-cart"
                   />
-                  
-                  <button 
-                    className={`btn-wishlist ${wishlistAdded ? 'active' : ''}`}
+                  <button
+                    className="pd-btn-buy-now"
+                    onClick={handleBuyNow}
+                    disabled={buyNowLoading}
+                  >
+                    {buyNowLoading ? (
+                      <div className="pd-btn-spinner"></div>
+                    ) : (
+                      <>
+                        <Zap size={20} />
+                        <span>Buy Now</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="pd-secondary-actions">
+                  <button
+                    className={`pd-btn-wishlist ${wishlistAdded ? 'pd-active' : ''}`}
                     onClick={addToWishlist}
                     aria-label={wishlistAdded ? "Remove from wishlist" : "Add to wishlist"}
                     title={wishlistAdded ? "Remove from wishlist" : "Add to wishlist"}
                   >
-                    <Heart size={22} fill={wishlistAdded ? "#EF4444" : "none"} stroke={wishlistAdded ? "#EF4444" : "currentColor"} />
+                    <Heart size={20} fill={wishlistAdded ? "#EF4444" : "none"} stroke={wishlistAdded ? "#EF4444" : "currentColor"} />
+                    <span className="pd-btn-label">Wishlist</span>
                   </button>
-                  
-                  <button 
-                    className="btn-share"
+
+                  <button
+                    className="pd-btn-share"
                     onClick={handleShare}
                     aria-label="Share product"
                     title="Share product"
                   >
-                    <Share2 size={22} />
+                    <Share2 size={20} />
+                    <span className="pd-btn-label">Share</span>
                   </button>
                 </div>
               </div>
 
               {/* Key Benefits */}
               {product.benefits.length > 0 && (
-                <div className="benefits-section">
-                  <h3 className="section-title">
-                    <Leaf size={20} />
+                <div className="pd-benefits">
+                  <h3 className="pd-section-title">
+                    <Leaf size={18} />
                     Key Benefits
                   </h3>
-                  <ul className="benefits-list">
+                  <ul className="pd-benefits-list">
                     {product.benefits.map((benefit, i) => (
-                      <li key={i} className="benefit-item">
-                        <span className="benefit-icon">
+                      <li key={i} className="pd-benefit-item">
+                        <span className="pd-benefit-icon">
                           <Check size={14} />
                         </span>
-                        <span className="benefit-text">{benefit}</span>
+                        <span className="pd-benefit-text">{benefit}</span>
                       </li>
                     ))}
                   </ul>
@@ -748,26 +895,26 @@ const ProductDetail = () => {
               )}
 
               {/* Trust Badges */}
-              <div className="trust-section">
-                <div className="trust-badge">
+              <div className="pd-trust-section">
+                <div className="pd-trust-badge">
                   <Truck size={20} />
-                  <div className="trust-content">
-                    <span className="trust-title">Free Shipping</span>
-                    <span className="trust-desc">Orders above ₹499</span>
+                  <div className="pd-trust-content">
+                    <span className="pd-trust-title">Free Shipping</span>
+                    <span className="pd-trust-desc">Orders above ₹499</span>
                   </div>
                 </div>
-                <div className="trust-badge">
+                <div className="pd-trust-badge">
                   <RotateCcw size={20} />
-                  <div className="trust-content">
-                    <span className="trust-title">Easy Returns</span>
-                    <span className="trust-desc">7-day return policy</span>
+                  <div className="pd-trust-content">
+                    <span className="pd-trust-title">Easy Returns</span>
+                    <span className="pd-trust-desc">7-day return policy</span>
                   </div>
                 </div>
-                <div className="trust-badge">
+                <div className="pd-trust-badge">
                   <Shield size={20} />
-                  <div className="trust-content">
-                    <span className="trust-title">Secure Payment</span>
-                    <span className="trust-desc">100% protected</span>
+                  <div className="pd-trust-content">
+                    <span className="pd-trust-title">Secure Payment</span>
+                    <span className="pd-trust-desc">100% protected</span>
                   </div>
                 </div>
               </div>
@@ -775,54 +922,53 @@ const ProductDetail = () => {
           </div>
 
           {/* Product Details Tabs - Desktop */}
-          <section className="product-details-section desktop-tabs">
-            <div className="tabs-container">
-              <div className="tabs-header" role="tablist">
-                <button 
-                  className={`tab-btn ${selectedTab === 'description' ? 'active' : ''}`}
+          <section className="pd-details-section pd-desktop-tabs">
+            <div className="pd-tabs-container">
+              <div className="pd-tabs-header" role="tablist">
+                <button
+                  className={`pd-tab-btn ${selectedTab === 'description' ? 'pd-active' : ''}`}
                   onClick={() => setSelectedTab('description')}
                   role="tab"
                   aria-selected={selectedTab === 'description'}
-                  aria-controls="panel-description"
+                  aria-controls="pd-panel-description"
                 >
                   Description
                 </button>
                 {(product.ingredientsHeading || product.ingredients.length > 0) && (
-                  <button 
-                    className={`tab-btn ${selectedTab === 'ingredients' ? 'active' : ''}`}
+                  <button
+                    className={`pd-tab-btn ${selectedTab === 'ingredients' ? 'pd-active' : ''}`}
                     onClick={() => setSelectedTab('ingredients')}
                     role="tab"
                     aria-selected={selectedTab === 'ingredients'}
-                    aria-controls="panel-ingredients"
+                    aria-controls="pd-panel-ingredients"
                   >
                     Ingredients
                   </button>
                 )}
                 {(product.howToUseHeading || product.howToUseDescription) && (
-                  <button 
-                    className={`tab-btn ${selectedTab === 'how-to-use' ? 'active' : ''}`}
+                  <button
+                    className={`pd-tab-btn ${selectedTab === 'how-to-use' ? 'pd-active' : ''}`}
                     onClick={() => setSelectedTab('how-to-use')}
                     role="tab"
                     aria-selected={selectedTab === 'how-to-use'}
-                    aria-controls="panel-how-to-use"
+                    aria-controls="pd-panel-how-to-use"
                   >
                     How to Use
                   </button>
                 )}
               </div>
-              
-              <div className="tabs-content">
+
+              <div className="pd-tabs-content">
                 {selectedTab === 'description' && (
-                  <div className="tab-panel" id="panel-description" role="tabpanel">
+                  <div className="pd-tab-panel" id="pd-panel-description" role="tabpanel">
                     {product.descriptionContent && (
-                      <div className="content-block">
+                      <div className="pd-content-block">
                         <h3>Product Description</h3>
                         <p>{product.descriptionContent}</p>
                       </div>
                     )}
-                    
                     {product.whyChoose && (
-                      <div className="content-block highlight">
+                      <div className="pd-content-block pd-highlight">
                         <h3>Why Choose This Product?</h3>
                         <p>{product.whyChoose}</p>
                       </div>
@@ -831,21 +977,19 @@ const ProductDetail = () => {
                 )}
 
                 {selectedTab === 'ingredients' && (
-                  <div className="tab-panel" id="panel-ingredients" role="tabpanel">
+                  <div className="pd-tab-panel" id="pd-panel-ingredients" role="tabpanel">
                     {product.ingredientsHeading && (
-                      <div className="content-block">
+                      <div className="pd-content-block">
                         <h3>{product.ingredientsHeading}</h3>
                         {product.ingredientsDescription && <p>{product.ingredientsDescription}</p>}
                       </div>
                     )}
-                    
                     {product.ingredientsSubheading && (
-                      <h4 className="subheading">{product.ingredientsSubheading}</h4>
+                      <h4 className="pd-subheading">{product.ingredientsSubheading}</h4>
                     )}
-                    
                     {product.ingredients.length > 0 && (
-                      <div className="ingredients-table-wrapper">
-                        <table className="ingredients-table">
+                      <div className="pd-ingredients-table-wrapper">
+                        <table className="pd-ingredients-table">
                           <thead>
                             <tr>
                               <th>Ingredient</th>
@@ -855,12 +999,8 @@ const ProductDetail = () => {
                           <tbody>
                             {product.ingredients.map((ing, i) => (
                               <tr key={i}>
-                                <td>
-                                  <span className="ingredient-name">{ing.name}</span>
-                                </td>
-                                <td>
-                                  <span className="ingredient-percentage">{ing.percentage || '-'}</span>
-                                </td>
+                                <td><span className="pd-ingredient-name">{ing.name}</span></td>
+                                <td><span className="pd-ingredient-pct">{ing.percentage || '-'}</span></td>
                               </tr>
                             ))}
                           </tbody>
@@ -871,16 +1011,15 @@ const ProductDetail = () => {
                 )}
 
                 {selectedTab === 'how-to-use' && (
-                  <div className="tab-panel" id="panel-how-to-use" role="tabpanel">
+                  <div className="pd-tab-panel" id="pd-panel-how-to-use" role="tabpanel">
                     {product.howToUseHeading && (
-                      <div className="content-block">
+                      <div className="pd-content-block">
                         <h3>{product.howToUseHeading}</h3>
                         {product.howToUseDescription && <p>{product.howToUseDescription}</p>}
                       </div>
                     )}
-                    
                     {product.proTips && (
-                      <div className="content-block pro-tips">
+                      <div className="pd-content-block pd-pro-tips">
                         <h4>
                           <Sparkles size={18} />
                           Pro Tips
@@ -895,28 +1034,27 @@ const ProductDetail = () => {
           </section>
 
           {/* Product Details Accordion - Mobile */}
-          <section className="product-details-section mobile-accordion">
-            <div className="accordion-container">
-              {/* Description */}
-              <div className={`accordion-item ${expandedAccordion === 'description' ? 'expanded' : ''}`}>
-                <button 
-                  className="accordion-header"
+          <section className="pd-details-section pd-mobile-accordion">
+            <div className="pd-accordion-container">
+              <div className={`pd-accordion-item ${expandedAccordion === 'description' ? 'pd-expanded' : ''}`}>
+                <button
+                  className="pd-accordion-header"
                   onClick={() => toggleAccordion('description')}
                   aria-expanded={expandedAccordion === 'description'}
                 >
                   <span>Description</span>
                   {expandedAccordion === 'description' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </button>
-                <div className="accordion-content">
-                  <div className="accordion-body">
+                <div className="pd-accordion-content">
+                  <div className="pd-accordion-body">
                     {product.descriptionContent && (
-                      <div className="content-block">
+                      <div className="pd-content-block">
                         <h4>Product Description</h4>
                         <p>{product.descriptionContent}</p>
                       </div>
                     )}
                     {product.whyChoose && (
-                      <div className="content-block">
+                      <div className="pd-content-block">
                         <h4>Why Choose This Product?</h4>
                         <p>{product.whyChoose}</p>
                       </div>
@@ -925,32 +1063,31 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Ingredients */}
               {(product.ingredientsHeading || product.ingredients.length > 0) && (
-                <div className={`accordion-item ${expandedAccordion === 'ingredients' ? 'expanded' : ''}`}>
-                  <button 
-                    className="accordion-header"
+                <div className={`pd-accordion-item ${expandedAccordion === 'ingredients' ? 'pd-expanded' : ''}`}>
+                  <button
+                    className="pd-accordion-header"
                     onClick={() => toggleAccordion('ingredients')}
                     aria-expanded={expandedAccordion === 'ingredients'}
                   >
                     <span>Ingredients</span>
                     {expandedAccordion === 'ingredients' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
-                  <div className="accordion-content">
-                    <div className="accordion-body">
+                  <div className="pd-accordion-content">
+                    <div className="pd-accordion-body">
                       {product.ingredientsHeading && (
-                        <div className="content-block">
+                        <div className="pd-content-block">
                           <h4>{product.ingredientsHeading}</h4>
                           {product.ingredientsDescription && <p>{product.ingredientsDescription}</p>}
                         </div>
                       )}
                       {product.ingredientsSubheading && <h5>{product.ingredientsSubheading}</h5>}
                       {product.ingredients.length > 0 && (
-                        <div className="ingredients-list-mobile">
+                        <div className="pd-ingredients-list-mobile">
                           {product.ingredients.map((ing, i) => (
-                            <div key={i} className="ingredient-item">
-                              <span className="ingredient-name">{ing.name}</span>
-                              <span className="ingredient-percentage">{ing.percentage || '-'}</span>
+                            <div key={i} className="pd-ingredient-item">
+                              <span className="pd-ingredient-name">{ing.name}</span>
+                              <span className="pd-ingredient-pct">{ing.percentage || '-'}</span>
                             </div>
                           ))}
                         </div>
@@ -960,27 +1097,26 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* How to Use */}
               {(product.howToUseHeading || product.howToUseDescription) && (
-                <div className={`accordion-item ${expandedAccordion === 'how-to-use' ? 'expanded' : ''}`}>
-                  <button 
-                    className="accordion-header"
+                <div className={`pd-accordion-item ${expandedAccordion === 'how-to-use' ? 'pd-expanded' : ''}`}>
+                  <button
+                    className="pd-accordion-header"
                     onClick={() => toggleAccordion('how-to-use')}
                     aria-expanded={expandedAccordion === 'how-to-use'}
                   >
                     <span>How to Use</span>
                     {expandedAccordion === 'how-to-use' ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
-                  <div className="accordion-content">
-                    <div className="accordion-body">
+                  <div className="pd-accordion-content">
+                    <div className="pd-accordion-body">
                       {product.howToUseHeading && (
-                        <div className="content-block">
+                        <div className="pd-content-block">
                           <h4>{product.howToUseHeading}</h4>
                           {product.howToUseDescription && <p>{product.howToUseDescription}</p>}
                         </div>
                       )}
                       {product.proTips && (
-                        <div className="content-block pro-tips-mobile">
+                        <div className="pd-content-block pd-pro-tips-mobile">
                           <h5>
                             <Sparkles size={16} />
                             Pro Tips
@@ -996,93 +1132,110 @@ const ProductDetail = () => {
           </section>
 
           {/* Reviews Section */}
-          <section className="reviews-section">
+          <section className="pd-reviews-section">
             <ReviewSystem productId={product.id} />
           </section>
         </div>
 
-        {/* Mobile Sticky Actions */}
-        <div className={`mobile-sticky-actions ${showMobileActions ? 'visible' : ''}`}>
-          <div className="sticky-price">
-            {product.discountPrice ? (
-              <>
-                <span className="sticky-current">₹{product.discountPrice.toLocaleString('en-IN')}</span>
-                <span className="sticky-original">₹{product.price.toLocaleString('en-IN')}</span>
-              </>
-            ) : (
-              <span className="sticky-current">₹{product.price.toLocaleString('en-IN')}</span>
-            )}
+        {/* Sticky Bottom Actions */}
+        <div className={`pd-sticky-actions ${showMobileActions ? 'pd-visible' : ''}`}>
+          <div className="pd-sticky-inner">
+            <div className="pd-sticky-price">
+              {product.discountPrice ? (
+                <>
+                  <span className="pd-sticky-current">₹{product.discountPrice.toLocaleString('en-IN')}</span>
+                  <span className="pd-sticky-original">₹{product.price.toLocaleString('en-IN')}</span>
+                </>
+              ) : (
+                <span className="pd-sticky-current">₹{product.price.toLocaleString('en-IN')}</span>
+              )}
+            </div>
+            <div className="pd-sticky-buttons">
+              <AddToCartButton
+                productId={product.id}
+                quantity={quantity}
+                selectedVariant={selectedVariant}
+                className="pd-btn-sticky-cart"
+              />
+              <button
+                className="pd-btn-sticky-buy"
+                onClick={handleBuyNow}
+                disabled={buyNowLoading}
+              >
+                {buyNowLoading ? (
+                  <div className="pd-btn-spinner-sm"></div>
+                ) : (
+                  <>
+                    <Zap size={18} />
+                    <span>Buy Now</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <AddToCartButton 
-            productId={product.id} 
-            quantity={quantity}
-            selectedVariant={selectedVariant}
-            className="btn-sticky-cart"
-          />
         </div>
 
         {/* Share Modal */}
         {showShareModal && (
-          <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
-            <div className="share-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
+          <div className="pd-modal-overlay" onClick={() => setShowShareModal(false)}>
+            <div className="pd-share-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="pd-modal-header">
                 <h3>Share Product</h3>
-                <button 
-                  className="modal-close"
+                <button
+                  className="pd-modal-close"
                   onClick={() => setShowShareModal(false)}
                   aria-label="Close modal"
                 >
                   <X size={24} />
                 </button>
               </div>
-              
-              <div className="modal-body">
-                <div className="share-product-preview">
-                  <img 
-                    src={product.images[0]} 
-                    alt={product.name} 
-                    className="preview-image"
+
+              <div className="pd-modal-body">
+                <div className="pd-share-preview">
+                  <img
+                    src={product.images[0]}
+                    alt={product.name}
+                    className="pd-preview-image"
                     onError={handleImageError}
                   />
-                  <div className="preview-details">
+                  <div className="pd-preview-details">
                     <h4>{product.name}</h4>
-                    <div className="preview-price">
-                      <span className="price-current">
+                    <div className="pd-preview-price">
+                      <span className="pd-price-current">
                         {product.discountPrice ? `₹${product.discountPrice}` : `₹${product.price}`}
                       </span>
                       {product.discount && (
-                        <span className="price-discount">{product.discount} OFF</span>
+                        <span className="pd-price-discount">{product.discount} OFF</span>
                       )}
                     </div>
                   </div>
                 </div>
-                
-                <div className="share-options-grid">
+
+                <div className="pd-share-options-grid">
                   {shareOptions.map((option) => (
                     <button
                       key={option.name}
-                      className="share-option-btn"
+                      className="pd-share-option-btn"
                       onClick={option.action}
-                      style={{ '--btn-color': option.color }}
                     >
-                      <div className="option-icon" style={{ backgroundColor: option.color }}>
+                      <div className="pd-option-icon" style={{ backgroundColor: option.color }}>
                         <option.icon size={20} color="#fff" />
                       </div>
                       <span>{option.name === 'Copy Link' && copySuccess ? 'Copied!' : option.name}</span>
                     </button>
                   ))}
                 </div>
-                
-                <div className="share-url-section">
-                  <div className="url-input-wrapper">
-                    <input 
-                      type="text" 
-                      value={getProductUrl()} 
-                      readOnly 
-                      className="url-input"
+
+                <div className="pd-share-url">
+                  <div className="pd-url-wrapper">
+                    <input
+                      type="text"
+                      value={getProductUrl()}
+                      readOnly
+                      className="pd-url-input"
                     />
-                    <button 
-                      className={`copy-btn ${copySuccess ? 'copied' : ''}`}
+                    <button
+                      className={`pd-copy-btn ${copySuccess ? 'pd-copied' : ''}`}
                       onClick={copyToClipboard}
                     >
                       {copySuccess ? <Check size={18} /> : <Copy size={18} />}
@@ -1099,7 +1252,6 @@ const ProductDetail = () => {
   );
 };
 
-// ChevronRight component for breadcrumb
 const ChevronRight = ({ size }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9,18 15,12 9,6" />
