@@ -27,7 +27,6 @@ const STATUS_CONFIG = {
   }
 };
 
-// COD Payment status options (what admin can update COD orders to)
 const COD_PAYMENT_STATUSES = ['SUCCESS', 'COD_PENDING'];
 
 const DATE_FILTERS = [
@@ -56,12 +55,10 @@ const getStatusConfig = (type, status) => {
   };
 };
 
-// Check if an order is a COD order (checks payment_id prefix)
 const isCODOrder = (paymentId) => {
   return paymentId && paymentId.toString().startsWith('COD-');
 };
 
-// Check if payment status can be updated (only COD orders)
 const canUpdatePaymentStatus = (paymentId) => {
   return isCODOrder(paymentId);
 };
@@ -104,7 +101,7 @@ const Notification = memo(({ notification, onClose }) => {
   if (!notification) return null;
   
   return (
-    <div className={`apm-notification apm-notification--${notification.type}`} role="alert">
+    <div className={`apm-notification apm-notification--${notification.type}`} role="alert" aria-live="assertive">
       <div className="apm-notification__icon">
         {notification.type === 'success' ? 
           <CheckCircle size={20} /> : 
@@ -112,6 +109,7 @@ const Notification = memo(({ notification, onClose }) => {
         }
       </div>
       <span className="apm-notification__message">{notification.message}</span>
+      <div className="apm-notification__progress"></div>
       <button 
         onClick={onClose} 
         className="apm-notification__close"
@@ -150,6 +148,7 @@ const StatsCard = memo(({ icon: Icon, label, value, color, onClick, isActive }) 
     className={`apm-stats-card apm-stats-card--${color} ${isActive ? 'apm-stats-card--active' : ''}`}
     onClick={onClick}
     type="button"
+    aria-pressed={isActive}
   >
     <div className="apm-stats-card__icon">
       <Icon size={22} />
@@ -177,7 +176,7 @@ const PaymentStatusBadge = memo(({ status }) => {
   );
 });
 
-// NEW: Payment Status Dropdown (Only for COD orders)
+// Payment Status Dropdown (Only for COD orders)
 const PaymentStatusDropdown = memo(({ status, orderId, onUpdate, isLoading }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -199,7 +198,6 @@ const PaymentStatusDropdown = memo(({ status, orderId, onUpdate, isLoading }) =>
     }
   }, [handleStatusChange]);
 
-  // Handle click outside to close
   useEffect(() => {
     if (!isOpen) return;
 
@@ -268,37 +266,36 @@ const PaymentStatusDropdown = memo(({ status, orderId, onUpdate, isLoading }) =>
         )}
       </button>
           
-    {isOpen && (
-      <div className="apm-status-dropdown__menu is-open" role="listbox">
-        {COD_PAYMENT_STATUSES
-          .filter(s => normalizeStatus(s) !== normalizeStatus(status))
-          .map(s => {
-            const statusConfig = getStatusConfig('payment', s);
-            const StatusIcon = statusConfig.icon;
-            return (
-              <button
-                key={s}
-                onClick={(e) => handleItemClick(e, s)}
-                onKeyDown={(e) => handleKeyDown(e, s)}
-                disabled={isLoading}
-                className={`apm-status-dropdown__item apm-status-dropdown__item--${statusConfig.color}`}
-                role="option"
-                type="button"
-              >
-                <StatusIcon size={16} />
-                <span>Mark as {statusConfig.label}</span>
-              </button>
-            );
-          })}
-      </div>
-    )}
+      {isOpen && (
+        <div className="apm-status-dropdown__menu is-open" role="listbox">
+          {COD_PAYMENT_STATUSES
+            .filter(s => normalizeStatus(s) !== normalizeStatus(status))
+            .map(s => {
+              const statusConfig = getStatusConfig('payment', s);
+              const StatusIcon = statusConfig.icon;
+              return (
+                <button
+                  key={s}
+                  onClick={(e) => handleItemClick(e, s)}
+                  onKeyDown={(e) => handleKeyDown(e, s)}
+                  disabled={isLoading}
+                  className={`apm-status-dropdown__item apm-status-dropdown__item--${statusConfig.color}`}
+                  role="option"
+                  type="button"
+                >
+                  <StatusIcon size={16} />
+                  <span>Mark as {statusConfig.label}</span>
+                </button>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 });
 
-// NEW: Smart Payment Status Component (Decides between Badge and Dropdown)
+// Smart Payment Status Component
 const PaymentStatus = memo(({ status, orderId, paymentId, onUpdate, isLoading }) => {
-  // Only show dropdown for COD orders (can update anytime)
   if (canUpdatePaymentStatus(paymentId)) {
     return (
       <PaymentStatusDropdown
@@ -310,7 +307,6 @@ const PaymentStatus = memo(({ status, orderId, paymentId, onUpdate, isLoading })
     );
   }
   
-  // Show read-only badge for online payment orders
   return <PaymentStatusBadge status={status} />;
 });
 
@@ -336,7 +332,6 @@ const OrderStatusDropdown = memo(({ status, orderId, onUpdate, isLoading, availa
     }
   }, [handleStatusChange]);
 
-  // Handle click outside to close
   useEffect(() => {
     if (!isOpen) return;
 
@@ -353,7 +348,6 @@ const OrderStatusDropdown = memo(({ status, orderId, onUpdate, isLoading, availa
       }
     };
 
-    // Delay adding listener to prevent immediate close
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
@@ -441,9 +435,9 @@ const OrderCard = memo(({
   onViewDetails, 
   onDelete, 
   onUpdateStatus,
-  onUpdatePaymentStatus, // NEW
+  onUpdatePaymentStatus,
   isUpdating,
-  isUpdatingPayment // NEW
+  isUpdatingPayment
 }) => {
   const totalAmount = useMemo(() => {
     if (!order.product_list || !Array.isArray(order.product_list)) return 0;
@@ -455,7 +449,6 @@ const OrderCard = memo(({
 
   return (
     <article className={`apm-order-card ${isSelected ? 'apm-order-card--selected' : ''} ${isCOD ? 'apm-order-card--cod' : ''}`}>
-      {/* COD Badge */}
       {isCOD && (
         <div className="apm-order-card__cod-indicator">
           <Banknote size={14} />
@@ -494,7 +487,6 @@ const OrderCard = memo(({
         </div>
 
         <div className="apm-order-card__status-group">
-          {/* Smart Payment Status - Dropdown for COD, Badge for others */}
           <PaymentStatus
             status={order.payment_status}
             orderId={order.id}
@@ -571,26 +563,49 @@ const OrderCard = memo(({
   );
 });
 
-// Order Details Modal
+// Order Details Modal - FIXED: centered overlay with focus trap
 const OrderDetailsModal = memo(({ 
   order, 
   onClose, 
   onUpdateStatus,
-  onUpdatePaymentStatus, // NEW
+  onUpdatePaymentStatus,
   isUpdating,
-  isUpdatingPayment // NEW
+  isUpdatingPayment
 }) => {
-  // ✅ Move ALL hooks BEFORE any conditional returns
-  
+  const modalRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const previousActiveElement = useRef(null);
+
   const totalAmount = useMemo(() => {
-    // Handle null/undefined order safely inside useMemo
     if (!order?.product_list || !Array.isArray(order.product_list)) return 0;
     return order.product_list.reduce((sum, item) => sum + (item.total_price || 0), 0);
-  }, [order?.product_list]); // Use optional chaining in dependency
+  }, [order?.product_list]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape') {
       onClose();
+      return;
+    }
+
+    // Focus trap
+    if (e.key === 'Tab' && modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
     }
   }, [onClose]);
 
@@ -601,34 +616,43 @@ const OrderDetailsModal = memo(({
   }, [onClose]);
 
   useEffect(() => {
-    // Only add listeners if order exists
     if (!order) return;
     
+    // Store previously focused element
+    previousActiveElement.current = document.activeElement;
+    
     document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
+    document.body.classList.add('apm-body-scroll-locked');
+    
+    // Focus the close button on open
+    requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
     
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.body.classList.remove('apm-body-scroll-locked');
+      
+      // Restore focus to previously focused element
+      previousActiveElement.current?.focus();
     };
-  }, [order, handleKeyDown]); // Add order as dependency
+  }, [order, handleKeyDown]);
 
-  // ✅ NOW we can have conditional return (after all hooks)
   if (!order) return null;
 
   const isCOD = isCODOrder(order.payment_id);
 
   return (
     <div 
-      className="apm-modal-overlay" 
+      className="apm-modal-overlay apm-modal-overlay--visible" 
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby="apm-modal-title"
     >
-      <div className="apm-modal apm-modal--large">
+      <div className="apm-modal apm-modal--large" ref={modalRef}>
         <header className="apm-modal__header">
-          <h2 id="modal-title" className="apm-modal__title">
+          <h2 id="apm-modal-title" className="apm-modal__title">
             <Package size={24} />
             Order #{order.id}
             {isCOD && (
@@ -639,6 +663,7 @@ const OrderDetailsModal = memo(({
             )}
           </h2>
           <button 
+            ref={closeButtonRef}
             onClick={onClose}
             className="apm-modal__close"
             aria-label="Close modal"
@@ -724,7 +749,6 @@ const OrderDetailsModal = memo(({
               <div className="apm-status-group">
                 <label className="apm-status-group__label">Payment Status</label>
                 <div className="apm-status-group__content">
-                  {/* Smart Payment Status */}
                   <PaymentStatus
                     status={order.payment_status}
                     orderId={order.id}
@@ -823,25 +847,73 @@ const OrderDetailsModal = memo(({
   );
 });
 
-// Delete Confirmation Modal
+// Delete Confirmation Modal - FIXED: centered overlay with focus trap
 const DeleteConfirmModal = memo(({ orderId, onConfirm, onCancel }) => {
-  const handleBackdropClick = (e) => {
+  const modalRef = useRef(null);
+  const cancelButtonRef = useRef(null);
+  const previousActiveElement = useRef(null);
+
+  const handleBackdropClick = useCallback((e) => {
     if (e.target === e.currentTarget) {
       onCancel();
     }
-  };
+  }, [onCancel]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      onCancel();
+      return;
+    }
+
+    if (e.key === 'Tab' && modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    }
+  }, [onCancel]);
+
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement;
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.classList.add('apm-body-scroll-locked');
+
+    requestAnimationFrame(() => {
+      cancelButtonRef.current?.focus();
+    });
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.classList.remove('apm-body-scroll-locked');
+      previousActiveElement.current?.focus();
+    };
+  }, [handleKeyDown]);
 
   return (
     <div 
-      className="apm-modal-overlay" 
+      className="apm-modal-overlay apm-modal-overlay--visible" 
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="delete-modal-title"
+      aria-labelledby="apm-delete-modal-title"
     >
-      <div className="apm-modal apm-modal--small">
+      <div className="apm-modal apm-modal--small apm-modal--danger" ref={modalRef}>
         <header className="apm-modal__header apm-modal__header--danger">
-          <h2 id="delete-modal-title" className="apm-modal__title">
+          <h2 id="apm-delete-modal-title" className="apm-modal__title">
             <AlertCircle size={24} />
             Confirm Deletion
           </h2>
@@ -871,6 +943,7 @@ const DeleteConfirmModal = memo(({ orderId, onConfirm, onCancel }) => {
 
         <footer className="apm-modal__footer">
           <button 
+            ref={cancelButtonRef}
             onClick={onCancel}
             className="apm-btn apm-btn--secondary"
             type="button"
@@ -933,7 +1006,7 @@ const Pagination = memo(({ currentPage, totalPages, onPageChange }) => {
         type="button"
       >
         <ChevronLeft size={18} />
-        <span>Previous</span>
+        <span className="apm-pagination__btn-text">Previous</span>
       </button>
       
       <div className="apm-pagination__pages">
@@ -961,7 +1034,7 @@ const Pagination = memo(({ currentPage, totalPages, onPageChange }) => {
         aria-label="Next page"
         type="button"
       >
-        <span>Next</span>
+        <span className="apm-pagination__btn-text">Next</span>
         <ChevronRight size={18} />
       </button>
     </nav>
@@ -977,7 +1050,7 @@ export default function AdminProductManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedOrders, setSelectedOrders] = useState(new Set());
   const [updatingOrders, setUpdatingOrders] = useState(new Set());
-  const [updatingPayments, setUpdatingPayments] = useState(new Set()); // NEW: Track payment updates
+  const [updatingPayments, setUpdatingPayments] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
   // Filter state
@@ -1076,7 +1149,6 @@ export default function AdminProductManagement() {
   const filteredOrders = useMemo(() => {
     let filtered = [...orders];
 
-    // Search filter
     if (filters.search.trim()) {
       const searchLower = filters.search.toLowerCase().trim();
       filtered = filtered.filter(order => {
@@ -1096,21 +1168,18 @@ export default function AdminProductManagement() {
       });
     }
 
-    // Order status filter
     if (filters.status !== 'ALL') {
       filtered = filtered.filter(order => 
         normalizeStatus(order.order_status) === filters.status
       );
     }
     
-    // Payment status filter
     if (filters.payment !== 'ALL') {
       filtered = filtered.filter(order => 
         normalizeStatus(order.payment_status) === filters.payment
       );
     }
 
-    // Date filter
     if (filters.dateRange !== 'ALL') {
       const now = new Date();
       now.setHours(23, 59, 59, 999);
@@ -1174,10 +1243,9 @@ export default function AdminProductManagement() {
       return acc;
     }, {});
 
-  // Count COD orders with pending payment
-  const codPendingCount = filteredOrders.filter(order => 
-    isCODOrder(order.payment_id) && normalizeStatus(order.payment_status) === 'COD_PENDING'
-  ).length;
+    const codPendingCount = filteredOrders.filter(order => 
+      isCODOrder(order.payment_id) && normalizeStatus(order.payment_status) === 'COD_PENDING'
+    ).length;
 
     const totalRevenue = filteredOrders.reduce((total, order) => {
       if (order.product_list && Array.isArray(order.product_list)) {
@@ -1210,7 +1278,6 @@ export default function AdminProductManagement() {
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
@@ -1270,7 +1337,6 @@ export default function AdminProductManagement() {
           : order
       ));
 
-      // Update modal order if open
       setModals(prev => ({
         ...prev,
         orderDetails: prev.orderDetails.order?.id === orderId 
@@ -1295,10 +1361,9 @@ export default function AdminProductManagement() {
   }, [showNotification]);
 
   // ============================================
-  // NEW: PAYMENT STATUS UPDATE (COD ONLY)
+  // PAYMENT STATUS UPDATE (COD ONLY)
   // ============================================
   const updatePaymentStatus = useCallback(async (orderId, newStatus) => {
-    // Find the order to check if it's COD
     const order = orders.find(o => o.id === orderId);
     
     if (!order) {
@@ -1306,7 +1371,6 @@ export default function AdminProductManagement() {
       return;
     }
 
-    // Verify this is a COD order
     if (!isCODOrder(order.payment_id)) {
       showNotification('Payment status can only be updated for COD orders', 'error');
       return;
@@ -1328,7 +1392,6 @@ export default function AdminProductManagement() {
           : order
       ));
 
-      // Update modal order if open
       setModals(prev => ({
         ...prev,
         orderDetails: prev.orderDetails.order?.id === orderId 
@@ -1494,249 +1557,254 @@ export default function AdminProductManagement() {
 
       {/* Header */}
       <header className="apm-header">
-        <div className="apm-header__main">
-          <div className="apm-header__title-group">
-            <h1 className="apm-header__title">
-              <Package size={28} />
-              Order Management
-            </h1>
-            <div className="apm-header__stats">
-              <span className="apm-header__stat">
-                {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
-              </span>
-              <span className="apm-header__stat apm-header__stat--highlight">
-                {formatCurrency(analytics.totalRevenue)} revenue
-              </span>
-              {analytics.statusCounts.PROCESSING > 0 && (
-                <span className="apm-header__stat apm-header__stat--warning">
-                  {analytics.statusCounts.PROCESSING} processing
+        <div className="apm-header__inner">
+          <div className="apm-header__main">
+            <div className="apm-header__title-group">
+              <h1 className="apm-header__title">
+                <Package size={28} />
+                Order Management
+              </h1>
+              <div className="apm-header__stats">
+                <span className="apm-header__stat">
+                  {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
                 </span>
-              )}
-              {/* NEW: COD Pending indicator */}
-              {analytics.codPendingCount > 0 && (
-                <span className="apm-header__stat apm-header__stat--cod">
-                  <Banknote size={14} />
-                  {analytics.codPendingCount} COD awaiting payment
+                <span className="apm-header__stat apm-header__stat--highlight">
+                  {formatCurrency(analytics.totalRevenue)} revenue
                 </span>
+                {analytics.statusCounts.PROCESSING > 0 && (
+                  <span className="apm-header__stat apm-header__stat--warning">
+                    {analytics.statusCounts.PROCESSING} processing
+                  </span>
+                )}
+                {analytics.codPendingCount > 0 && (
+                  <span className="apm-header__stat apm-header__stat--cod">
+                    <Banknote size={14} />
+                    {analytics.codPendingCount} COD awaiting payment
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="apm-header__actions">
+              <button 
+                onClick={loadOrders} 
+                className="apm-btn apm-btn--secondary"
+                type="button"
+              >
+                <RefreshCw size={18} />
+                <span>Refresh</span>
+              </button>
+              
+              {selectedOrders.size > 0 && (
+                <div className="apm-header__bulk-actions">
+                  <button 
+                    onClick={selectAllOrders} 
+                    className="apm-btn apm-btn--secondary"
+                    type="button"
+                  >
+                    {selectedOrders.size === paginatedOrders.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <button 
+                    onClick={bulkDeleteOrders} 
+                    className="apm-btn apm-btn--danger"
+                    type="button"
+                  >
+                    <Trash2 size={18} />
+                    <span>Delete ({selectedOrders.size})</span>
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-          
-          <div className="apm-header__actions">
-            <button 
-              onClick={loadOrders} 
-              className="apm-btn apm-btn--secondary"
-              type="button"
-            >
-              <RefreshCw size={18} />
-              <span>Refresh</span>
-            </button>
-            
-            {selectedOrders.size > 0 && (
-              <div className="apm-header__bulk-actions">
-                <button 
-                  onClick={selectAllOrders} 
-                  className="apm-btn apm-btn--secondary"
-                  type="button"
-                >
-                  {selectedOrders.size === paginatedOrders.length ? 'Deselect All' : 'Select All'}
-                </button>
-                <button 
-                  onClick={bulkDeleteOrders} 
-                  className="apm-btn apm-btn--danger"
-                  type="button"
-                >
-                  <Trash2 size={18} />
-                  <span>Delete ({selectedOrders.size})</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </header>
 
-      {/* Stats Grid */}
-      <section className="apm-stats-grid" aria-label="Order statistics">
-        {Object.entries(STATUS_CONFIG.order).map(([status, config]) => (
-          <StatsCard
-            key={status}
-            icon={config.icon}
-            label={config.label}
-            value={analytics.statusCounts[status] || 0}
-            color={config.color}
-            onClick={() => updateFilter('status', filters.status === status ? 'ALL' : status)}
-            isActive={filters.status === status}
-          />
-        ))}
-      </section>
-
-      {/* Filters */}
-      <section className="apm-filters">
-        <div className="apm-filters__main">
-          <div className="apm-search">
-            <Search size={20} className="apm-search__icon" />
-            <input
-              type="text"
-              placeholder="Search by order ID, customer, phone, city..."
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              className="apm-search__input"
-              aria-label="Search orders"
+      {/* Main Content Wrapper */}
+      <div className="apm-content">
+        {/* Stats Grid */}
+        <section className="apm-stats-grid" aria-label="Order statistics">
+          {Object.entries(STATUS_CONFIG.order).map(([status, config]) => (
+            <StatsCard
+              key={status}
+              icon={config.icon}
+              label={config.label}
+              value={analytics.statusCounts[status] || 0}
+              color={config.color}
+              onClick={() => updateFilter('status', filters.status === status ? 'ALL' : status)}
+              isActive={filters.status === status}
             />
-            {filters.search && (
+          ))}
+        </section>
+
+        {/* Filters */}
+        <section className="apm-filters">
+          <div className="apm-filters__main">
+            <div className="apm-search">
+              <Search size={20} className="apm-search__icon" />
+              <input
+                type="text"
+                placeholder="Search by order ID, customer, phone, city..."
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                className="apm-search__input"
+                aria-label="Search orders"
+              />
+              {filters.search && (
+                <button 
+                  onClick={() => updateFilter('search', '')}
+                  className="apm-search__clear"
+                  aria-label="Clear search"
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`apm-btn apm-btn--filter ${showFilters ? 'apm-btn--filter-active' : ''} ${hasActiveFilters ? 'apm-btn--has-filters' : ''}`}
+              type="button"
+              aria-expanded={showFilters}
+            >
+              <Filter size={18} />
+              <span>Filters</span>
+              {hasActiveFilters && (
+                <span className="apm-btn__badge">
+                  {[filters.status !== 'ALL', filters.payment !== 'ALL', filters.dateRange !== 'ALL'].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
+            {hasActiveFilters && (
               <button 
-                onClick={() => updateFilter('search', '')}
-                className="apm-search__clear"
-                aria-label="Clear search"
+                onClick={clearFilters}
+                className="apm-btn apm-btn--ghost"
                 type="button"
               >
-                <X size={16} />
+                Clear all
               </button>
             )}
           </div>
 
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className={`apm-btn apm-btn--filter ${showFilters ? 'apm-btn--filter-active' : ''} ${hasActiveFilters ? 'apm-btn--has-filters' : ''}`}
-            type="button"
-          >
-            <Filter size={18} />
-            <span>Filters</span>
-            {hasActiveFilters && (
-              <span className="apm-btn__badge">
-                {[filters.status !== 'ALL', filters.payment !== 'ALL', filters.dateRange !== 'ALL'].filter(Boolean).length}
-              </span>
-            )}
-          </button>
-
-          {hasActiveFilters && (
-            <button 
-              onClick={clearFilters}
-              className="apm-btn apm-btn--ghost"
-              type="button"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-
-        {showFilters && (
-          <div className="apm-filters__panel">
-            <div className="apm-filter-group">
-              <label className="apm-filter-group__label">Order Status</label>
-              <select
-                value={filters.status}
-                onChange={(e) => updateFilter('status', e.target.value)}
-                className="apm-select"
-              >
-                <option value="ALL">All Statuses</option>
-                {Object.entries(STATUS_CONFIG.order).map(([status, config]) => (
-                  <option key={status} value={status}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="apm-filter-group">
-              <label className="apm-filter-group__label">Payment Status</label>
-              <select
-                value={filters.payment}
-                onChange={(e) => updateFilter('payment', e.target.value)}
-                className="apm-select"
-              >
-                <option value="ALL">All Payments</option>
-                {Object.entries(STATUS_CONFIG.payment).map(([status, config]) => (
-                  <option key={status} value={status}>{config.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="apm-filter-group">
-              <label className="apm-filter-group__label">Date Range</label>
-              <select
-                value={filters.dateRange}
-                onChange={(e) => updateFilter('dateRange', e.target.value)}
-                className="apm-select"
-              >
-                {DATE_FILTERS.map(filter => (
-                  <option key={filter.value} value={filter.value}>
-                    {filter.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {showCustomDatePicker && (
-              <div className="apm-filter-group apm-filter-group--date-range">
-                <label className="apm-filter-group__label">Custom Date Range</label>
-                <div className="apm-date-picker">
-                  <input
-                    type="date"
-                    value={filters.customDate.start}
-                    onChange={(e) => setFilters(prev => ({ 
-                      ...prev, 
-                      customDate: { ...prev.customDate, start: e.target.value }
-                    }))}
-                    className="apm-date-input"
-                    aria-label="Start date"
-                  />
-                  <span className="apm-date-picker__separator">to</span>
-                  <input
-                    type="date"
-                    value={filters.customDate.end}
-                    onChange={(e) => setFilters(prev => ({ 
-                      ...prev, 
-                      customDate: { ...prev.customDate, end: e.target.value }
-                    }))}
-                    className="apm-date-input"
-                    aria-label="End date"
-                  />
-                </div>
+          {showFilters && (
+            <div className="apm-filters__panel">
+              <div className="apm-filter-group">
+                <label className="apm-filter-group__label">Order Status</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => updateFilter('status', e.target.value)}
+                  className="apm-select"
+                >
+                  <option value="ALL">All Statuses</option>
+                  {Object.entries(STATUS_CONFIG.order).map(([status, config]) => (
+                    <option key={status} value={status}>{config.label}</option>
+                  ))}
+                </select>
               </div>
-            )}
-          </div>
-        )}
-      </section>
 
-      {/* Orders List */}
-      <main className="apm-orders">
-        {paginatedOrders.length === 0 ? (
-          <EmptyState 
-            title="No orders found"
-            description={hasActiveFilters 
-              ? "Try adjusting your filters or search terms." 
-              : "Orders will appear here once customers place them."
-            }
-            icon={Package}
-          />
-        ) : (
-          <>
-            <div className="apm-orders__list">
-              {paginatedOrders.map(order => (
-                <OrderCard
-                  key={order.id}
-                  order={order}
-                  isSelected={selectedOrders.has(order.id)}
-                  onToggleSelect={toggleOrderSelection}
-                  onViewDetails={openOrderDetails}
-                  onDelete={openDeleteConfirm}
-                  onUpdateStatus={updateOrderStatus}
-                  onUpdatePaymentStatus={updatePaymentStatus}
-                  isUpdating={updatingOrders.has(order.id)}
-                  isUpdatingPayment={updatingPayments.has(order.id)}
-                />
-              ))}
+              <div className="apm-filter-group">
+                <label className="apm-filter-group__label">Payment Status</label>
+                <select
+                  value={filters.payment}
+                  onChange={(e) => updateFilter('payment', e.target.value)}
+                  className="apm-select"
+                >
+                  <option value="ALL">All Payments</option>
+                  {Object.entries(STATUS_CONFIG.payment).map(([status, config]) => (
+                    <option key={status} value={status}>{config.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="apm-filter-group">
+                <label className="apm-filter-group__label">Date Range</label>
+                <select
+                  value={filters.dateRange}
+                  onChange={(e) => updateFilter('dateRange', e.target.value)}
+                  className="apm-select"
+                >
+                  {DATE_FILTERS.map(filter => (
+                    <option key={filter.value} value={filter.value}>
+                      {filter.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {showCustomDatePicker && (
+                <div className="apm-filter-group apm-filter-group--date-range">
+                  <label className="apm-filter-group__label">Custom Date Range</label>
+                  <div className="apm-date-picker">
+                    <input
+                      type="date"
+                      value={filters.customDate.start}
+                      onChange={(e) => setFilters(prev => ({ 
+                        ...prev, 
+                        customDate: { ...prev.customDate, start: e.target.value }
+                      }))}
+                      className="apm-date-input"
+                      aria-label="Start date"
+                    />
+                    <span className="apm-date-picker__separator">to</span>
+                    <input
+                      type="date"
+                      value={filters.customDate.end}
+                      onChange={(e) => setFilters(prev => ({ 
+                        ...prev, 
+                        customDate: { ...prev.customDate, end: e.target.value }
+                      }))}
+                      className="apm-date-input"
+                      aria-label="End date"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </>
-        )}
-      </main>
+          )}
+        </section>
 
-      {/* Modals */}
+        {/* Orders List */}
+        <main className="apm-orders">
+          {paginatedOrders.length === 0 ? (
+            <EmptyState 
+              title="No orders found"
+              description={hasActiveFilters 
+                ? "Try adjusting your filters or search terms." 
+                : "Orders will appear here once customers place them."
+              }
+              icon={Package}
+            />
+          ) : (
+            <>
+              <div className="apm-orders__list">
+                {paginatedOrders.map(order => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    isSelected={selectedOrders.has(order.id)}
+                    onToggleSelect={toggleOrderSelection}
+                    onViewDetails={openOrderDetails}
+                    onDelete={openDeleteConfirm}
+                    onUpdateStatus={updateOrderStatus}
+                    onUpdatePaymentStatus={updatePaymentStatus}
+                    isUpdating={updatingOrders.has(order.id)}
+                    isUpdatingPayment={updatingPayments.has(order.id)}
+                  />
+                ))}
+              </div>
+              
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* Modals - rendered at root level, fixed position */}
       {modals.orderDetails.show && (
         <OrderDetailsModal
           order={modals.orderDetails.order}
