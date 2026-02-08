@@ -27,11 +27,11 @@ import PaymentCancel from "./pages/PaymentCancel";
 import AdminLanding from "./pages/AdminPage";
 import AdminSubscription from "./pages/AdminSubscription";
 import AdminContactForm from "./pages/AdminContactForm";
-import YourOrders from "./pages/YourOrders"; // ✅ Fix: Capital Y
-import AdminProductManager  from "./pages/AdminProductManager"; // ✅ Fix: Import AdminProductManager
+import YourOrders from "./pages/YourOrders";
+import AdminProductManager from "./pages/AdminProductManager";
+import SmoothExperience from "./components/SmoothExperience"; // ✅ Import
 import "./App.css";
 
-// ✅ Initialize Supabase
 const supabase = createClient(
   "https://mmiyyhmbxodfdnuqomyx.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1taXl5aG1ieG9kZmRudXFvbXl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwNzkwNDksImV4cCI6MjA2MTY1NTA0OX0.KIwuisA_nq1_9ROw88wzMQMa7HQfzPMlrCjCqXdyEDk"
@@ -40,53 +40,54 @@ const supabase = createClient(
 function App() {
   return (
     <HelmetProvider>
-    <SessionContextProvider supabaseClient={supabase}>
-      <AppProvider>
-        <ToastProvider>
-          <Router>
-            <ScrollToTop />
-            <div className="app-container">
-              <header className="app-header">
-                <Navbar />
-              </header>
+      <SessionContextProvider supabaseClient={supabase}>
+        <AppProvider>
+          <ToastProvider>
+            <Router>
+              <ScrollToTop />
+              <SmoothExperience> {/* ✅ Wraps everything inside Router */}
+                <div className="app-container">
+                  <header className="app-header">
+                    <Navbar />
+                  </header>
 
-              <main className="app-main">
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/products" element={<ProductListingPage />} />
-                  <Route path="/product/:id" element={<ProductDetails />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/blog" element={<BlogPage />} />
-                  <Route path="/contact" element={<ContactPage />} />
-                  <Route path="/faq" element={<FAQPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/terms-and-conditions" element={<Tnc />} />
-                  <Route path="/tnc" element={<Tnc />} />
-                  <Route path="/payment-success" element={<PaymentSuccess />} />
-                  <Route path="/payment-cancel" element={<PaymentCancel />} />
-                  <Route path="/admin-order" element={<AdminOrder />} />
-                  <Route path="/admin-landing" element={<AdminLanding />} />
-                  <Route path="/admin-subscription" element={<AdminSubscription />} />
-                  <Route path="/admin-contactform" element={<AdminContactForm />} />
-                  <Route path="/your-orders" element={<YourOrders />} /> {/* ✅ Fix case */}
-                  <Route path="/admin-product-manager" element={<AdminProductManager/>} /> {/* ✅ Fix: Use correct component name */}    
-                  {/* Catch-all route for undefined paths */}
-                  <Route path="*" element={<HomePage />} />
-                </Routes>
-              </main>
+                  <main className="app-main">
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/products" element={<ProductListingPage />} />
+                      <Route path="/product/:id" element={<ProductDetails />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/blog" element={<BlogPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/faq" element={<FAQPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/terms-and-conditions" element={<Tnc />} />
+                      <Route path="/tnc" element={<Tnc />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
+                      <Route path="/payment-cancel" element={<PaymentCancel />} />
+                      <Route path="/admin-order" element={<AdminOrder />} />
+                      <Route path="/admin-landing" element={<AdminLanding />} />
+                      <Route path="/admin-subscription" element={<AdminSubscription />} />
+                      <Route path="/admin-contactform" element={<AdminContactForm />} />
+                      <Route path="/your-orders" element={<YourOrders />} />
+                      <Route path="/admin-product-manager" element={<AdminProductManager />} />
+                      <Route path="*" element={<HomePage />} />
+                    </Routes>
+                  </main>
 
-              <footer className="app-footer">
-                <Footer />
-                <p>© 2025 Chase WorldWide. All rights reserved.</p>
-              </footer>
-            </div>
-          </Router>
-        </ToastProvider>
-      </AppProvider>
-    </SessionContextProvider>
+                  <footer className="app-footer">
+                    <Footer />
+                    <p>© 2025 Chase WorldWide. All rights reserved.</p>
+                  </footer>
+                </div>
+              </SmoothExperience> {/* ✅ Close wrapper */}
+            </Router>
+          </ToastProvider>
+        </AppProvider>
+      </SessionContextProvider>
     </HelmetProvider>
   );
 }
