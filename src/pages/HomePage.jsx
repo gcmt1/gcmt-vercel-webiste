@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowRight, Instagram, Star, Shield, Truck, Award, Leaf, X, ShoppingBag, Eye, Heart } from 'lucide-react';
+// HomePage.jsx
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { ArrowRight, Instagram, Star, Shield, Truck, Award, Leaf, X, ShoppingBag, Eye, Heart, ChevronDown, MousePointer2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import '../styles/HomePage.css';
@@ -7,8 +8,203 @@ import GCMTVideo from '../assets/marketing-video.mp4';
 import GCMTLogo from '../assets/GCMT-logo.png';
 import DefaultProductImage from '../assets/product.png';
 
-/* ─── Inline "Buy Now" Product Card ─── */
-const HomepageProductCard = ({ productId }) => {
+/* ─── First-Time User Guide Overlay (Single Step) ─── */
+const FirstTimeGuide = ({ onClose, buyNowBtnRef }) => {
+  const [spotlightStyle, setSpotlightStyle] = useState({});
+  const [arrowStyle, setArrowStyle] = useState({});
+  const [messageStyle, setMessageStyle] = useState({});
+  const [isExiting, setIsExiting] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  const updatePositions = useCallback(() => {
+    if (!buyNowBtnRef || !buyNowBtnRef.current) return;
+
+    const rect = buyNowBtnRef.current.getBoundingClientRect();
+    const scrollY = window.scrollY || window.pageYOffset;
+    const scrollX = window.scrollX || window.pageXOffset;
+
+    const padding = 8;
+    setSpotlightStyle({
+      top: rect.top + scrollY - padding,
+      left: rect.left + scrollX - padding,
+      width: rect.width + padding * 2,
+      height: rect.height + padding * 2,
+      borderRadius: '12px',
+    });
+
+    // Position arrow above the button
+    setArrowStyle({
+      top: rect.top + scrollY - 70,
+      left: rect.left + scrollX + rect.width / 2 - 24,
+    });
+
+    // Position message above the arrow
+    const messageWidth = Math.min(320, window.innerWidth - 40);
+    let messageLeft = rect.left + scrollX + rect.width / 2 - messageWidth / 2;
+    
+    // Keep message within viewport
+    if (messageLeft < 20) messageLeft = 20;
+    if (messageLeft + messageWidth > window.innerWidth - 20) {
+      messageLeft = window.innerWidth - messageWidth - 20;
+    }
+
+    setMessageStyle({
+      top: rect.top + scrollY - 200,
+      left: messageLeft,
+      width: messageWidth,
+    });
+  }, [buyNowBtnRef]);
+
+  useEffect(() => {
+    if (!buyNowBtnRef || !buyNowBtnRef.current) return;
+
+    // Scroll the hero section into view smoothly
+    buyNowBtnRef.current.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+
+    const timer = setTimeout(() => {
+      updatePositions();
+      setIsReady(true);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [buyNowBtnRef, updatePositions]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updatePositions);
+    window.addEventListener('scroll', updatePositions);
+    return () => {
+      window.removeEventListener('resize', updatePositions);
+      window.removeEventListener('scroll', updatePositions);
+    };
+  }, [updatePositions]);
+
+  const handleGotIt = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      localStorage.setItem('gcmt_guide_seen', 'true');
+      onClose();
+    }, 400);
+  };
+
+  const handleSkip = () => {
+    handleGotIt();
+  };
+
+  return (
+    <div className={`hp-guide-overlay ${isExiting ? 'hp-guide-overlay--exiting' : ''}`}>
+      {/* Dark backdrop with cutout */}
+      <svg className="hp-guide-backdrop" preserveAspectRatio="none">
+        <defs>
+          <mask id="hp-guide-mask">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {isReady && (
+              <rect
+                x={spotlightStyle.left}
+                y={spotlightStyle.top}
+                width={spotlightStyle.width}
+                height={spotlightStyle.height}
+                rx="12"
+                ry="12"
+                fill="black"
+                className="hp-guide-spotlight-rect"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(0, 0, 0, 0.8)"
+          mask="url(#hp-guide-mask)"
+        />
+      </svg>
+
+      {/* Glowing border around spotlight */}
+      {isReady && (
+        <div
+          className="hp-guide-spotlight-border"
+          style={{
+            top: spotlightStyle.top,
+            left: spotlightStyle.left,
+            width: spotlightStyle.width,
+            height: spotlightStyle.height,
+            borderRadius: spotlightStyle.borderRadius,
+          }}
+        />
+      )}
+
+      {/* Animated pointing arrow */}
+      {isReady && (
+        <div
+          className="hp-guide-arrow hp-guide-arrow--down"
+          style={{
+            top: arrowStyle.top,
+            left: arrowStyle.left,
+          }}
+        >
+          <div className="hp-guide-arrow-inner">
+            <MousePointer2 size={28} />
+          </div>
+        </div>
+      )}
+
+      {/* Message box */}
+      {isReady && (
+        <div
+          className="hp-guide-message"
+          style={{
+            top: messageStyle.top,
+            left: messageStyle.left,
+            width: messageStyle.width,
+          }}
+        >
+          <div className="hp-guide-message-content">
+            <div className="hp-guide-message-emoji">👋</div>
+            <h3 className="hp-guide-message-title">Welcome!</h3>
+            <p className="hp-guide-message-text">
+              Click this <strong>"Buy Now"</strong> button to buy the product.
+            </p>
+            <p className="hp-guide-message-sub">
+              It's easy and fast!
+            </p>
+
+            <div className="hp-guide-message-actions">
+              <button className="hp-guide-skip-btn" onClick={handleSkip}>
+                Skip
+              </button>
+              <button className="hp-guide-next-btn" onClick={handleGotIt}>
+                Got it! 👍
+              </button>
+            </div>
+          </div>
+
+          {/* Decorative pulse */}
+          <div className="hp-guide-message-pulse" />
+        </div>
+      )}
+
+      {/* Close button (top right) */}
+      <button className="hp-guide-close-btn" onClick={handleGotIt} aria-label="Close guide">
+        <X size={20} />
+      </button>
+
+      {/* Top banner */}
+      <div className="hp-guide-top-banner">
+        <span className="hp-guide-top-banner-icon">🎯</span>
+        <span>Quick Guide — See how to buy in seconds!</span>
+      </div>
+    </div>
+  );
+};
+
+
+/* ─── Hero Product Card Component ─── */
+const HeroProductCard = React.forwardRef(({ productId, buyNowBtnRef }, ref) => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,7 +229,6 @@ const HomepageProductCard = ({ productId }) => {
         let imageUrl = DefaultProductImage;
         let rawImagePath = data.product_image || '';
         if (data.product_image) {
-          // Handle comma-separated images — take the first one
           let firstImage = data.product_image;
           if (data.product_image.includes(',')) {
             firstImage = data.product_image.split(',')[0].trim();
@@ -79,15 +274,9 @@ const HomepageProductCard = ({ productId }) => {
     try {
       setBuyNowLoading(true);
 
-      // Check for authenticated user via Supabase
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (authUser) {
-        // ===== LOGGED-IN USER FLOW =====
-        // Checkout reads from 'cart_items' table with:
-        // supabase.from('cart_items').select('id, product_id, quantity, products:products(...)').eq('user_id', user.id)
-
-        // Check if this product already exists in cart
         const { data: existingItems, error: fetchError } = await supabase
           .from('cart_items')
           .select('id, quantity')
@@ -100,7 +289,6 @@ const HomepageProductCard = ({ productId }) => {
         }
 
         if (existingItems && existingItems.length > 0) {
-          // Product already in cart - update quantity
           const existingItem = existingItems[0];
           const newQuantity = existingItem.quantity + 1;
 
@@ -113,10 +301,7 @@ const HomepageProductCard = ({ productId }) => {
             console.error('Error updating cart item:', updateError);
             throw new Error('Failed to update cart');
           }
-
-          console.log('✅ Updated cart item quantity:', newQuantity);
         } else {
-          // Product not in cart - insert new item
           const { error: insertError } = await supabase
             .from('cart_items')
             .insert({
@@ -129,31 +314,20 @@ const HomepageProductCard = ({ productId }) => {
             console.error('Error inserting cart item:', insertError);
             throw new Error('Failed to add to cart');
           }
-
-          console.log('✅ Added new item to cart_items');
         }
 
-        // Navigate to checkout
         navigate('/checkout');
 
       } else {
-        // ===== GUEST USER FLOW =====
-        // Checkout reads guest cart from: JSON.parse(sessionStorage.getItem('guest_cart')) || []
-        // Expected format per item: { id, productId, name, price, image, quantity }
-
         const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
 
-        // Check if product already exists in guest cart
         const existingIndex = guestCart.findIndex(
           item => item.productId === product.id
         );
 
         if (existingIndex !== -1) {
-          // Update quantity of existing item
           guestCart[existingIndex].quantity += 1;
-          console.log('✅ Updated guest cart item quantity:', guestCart[existingIndex].quantity);
         } else {
-          // Add new item matching the format Checkout expects
           guestCart.push({
             id: `guest_${product.id}_${Date.now()}`,
             productId: product.id,
@@ -162,14 +336,9 @@ const HomepageProductCard = ({ productId }) => {
             image: product.rawImagePath,
             quantity: 1,
           });
-
-          console.log('✅ Added new item to guest cart');
         }
 
-        // Save back to sessionStorage
         sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
-
-        // Navigate to checkout
         navigate('/checkout');
       }
 
@@ -197,7 +366,311 @@ const HomepageProductCard = ({ productId }) => {
 
   if (loading) {
     return (
-      <div className="hp-product-card hp-product-card--skeleton">
+      <div className="hp-hero-product-card hp-hero-product-card--skeleton" ref={ref}>
+        <div className="hp-hero-product-card__skeleton-image" />
+        <div className="hp-hero-product-card__skeleton-content">
+          <div className="hp-hero-product-card__skeleton-title" />
+          <div className="hp-hero-product-card__skeleton-text" />
+          <div className="hp-hero-product-card__skeleton-price" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="hp-hero-product-card hp-hero-product-card--error" ref={ref}>{error}</div>;
+  }
+
+  return (
+    <div
+      className="hp-hero-product-card"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      ref={ref}
+    >
+      <div className="hp-hero-product-card__inner" onClick={handleCardClick}>
+        <div className="hp-hero-product-card__image-container">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="hp-hero-product-card__image"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = DefaultProductImage;
+            }}
+          />
+
+          {product.discount && (
+            <div className="hp-hero-product-card__discount-badge">
+              -{product.discount} OFF
+            </div>
+          )}
+
+          {!product.inStock && (
+            <div className="hp-hero-product-card__out-of-stock-overlay">
+              <span>Out of Stock</span>
+            </div>
+          )}
+
+          <div
+            className={`hp-hero-product-card__actions ${
+              isHovered ? 'hp-hero-product-card__actions--show' : ''
+            }`}
+          >
+            <button
+              className="hp-hero-product-card__action-btn hp-hero-product-card__quick-view-btn"
+              onClick={handleQuickView}
+              aria-label="Quick view"
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              className={`hp-hero-product-card__action-btn hp-hero-product-card__favorite-btn ${
+                isFavorite ? 'hp-hero-product-card__favorite--active' : ''
+              }`}
+              onClick={toggleFavorite}
+              aria-label="Add to favorites"
+            >
+              <Heart size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="hp-hero-product-card__info">
+          {product.category && (
+            <div className="hp-hero-product-card__category">{product.category}</div>
+          )}
+
+          <h3 className="hp-hero-product-card__name">{product.name}</h3>
+
+          <div className="hp-hero-product-card__rating">
+            <div className="hp-hero-product-card__stars">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  size={12}
+                  fill={i < Math.floor(product.rating) ? '#FFB800' : 'none'}
+                  stroke={
+                    i < Math.floor(product.rating) ? '#FFB800' : '#CBD5E0'
+                  }
+                />
+              ))}
+            </div>
+            <span className="hp-hero-product-card__rating-value">
+              {product.rating}
+            </span>
+          </div>
+
+          <div className="hp-hero-product-card__price-container">
+            {product.discountPrice ? (
+              <>
+                <span className="hp-hero-product-card__price--current">
+                  ₹{product.discountPrice}
+                </span>
+                <span className="hp-hero-product-card__price--original">
+                  ₹{product.priceFormatted}
+                </span>
+              </>
+            ) : (
+              <span className="hp-hero-product-card__price--current">
+                ₹{product.priceFormatted}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="hp-hero-product-card__footer"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          className="hp-hero-product-card__buy-now-btn"
+          onClick={handleBuyNow}
+          disabled={!product.inStock || buyNowLoading}
+          ref={buyNowBtnRef}
+        >
+          {buyNowLoading ? (
+            <span>Adding...</span>
+          ) : (
+            <>
+              <ShoppingBag size={16} />
+              <span>{product.inStock ? 'Buy Now' : 'Out of Stock'}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+});
+
+HeroProductCard.displayName = 'HeroProductCard';
+
+
+/* ─── Inline "Buy Now" Product Card (for products section) ─── */
+const HomepageProductCard = React.forwardRef(({ productId, isFirstCard }, ref) => {
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function fetchProduct() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching product:', error.message);
+        setError('Could not load product.');
+      } else {
+        let imageUrl = DefaultProductImage;
+        let rawImagePath = data.product_image || '';
+        if (data.product_image) {
+          let firstImage = data.product_image;
+          if (data.product_image.includes(',')) {
+            firstImage = data.product_image.split(',')[0].trim();
+          }
+          const { data: imageData, error: imageError } = supabase
+            .storage
+            .from('product-image')
+            .getPublicUrl(firstImage);
+          if (!imageError && imageData && imageData.publicUrl) {
+            imageUrl = imageData.publicUrl;
+          }
+          rawImagePath = firstImage;
+        }
+
+        const productData = {
+          id: data.id,
+          name: data.product_name,
+          shortDescription: data.product_sub_description,
+          price: Number(data.product_price),
+          priceFormatted: Number(data.product_price).toFixed(2),
+          discount: data.product_discount ? `${data.product_discount}%` : null,
+          discountValue: data.product_discount || 0,
+          discountPrice: data.product_discount
+            ? +(data.product_price * (1 - data.product_discount / 100)).toFixed(2)
+            : null,
+          image: imageUrl,
+          rawImagePath: rawImagePath,
+          category: data.category,
+          rating: data.rating || 4.5,
+          inStock: data.in_stock !== false,
+        };
+        setProduct(productData);
+      }
+      setLoading(false);
+    }
+    fetchProduct();
+  }, [productId]);
+
+  const handleBuyNow = async (e) => {
+    e.stopPropagation();
+    if (!product || !product.inStock) return;
+
+    try {
+      setBuyNowLoading(true);
+
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (authUser) {
+        const { data: existingItems, error: fetchError } = await supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', authUser.id)
+          .eq('product_id', product.id);
+
+        if (fetchError) {
+          console.error('Error checking cart:', fetchError);
+          throw new Error('Failed to check cart');
+        }
+
+        if (existingItems && existingItems.length > 0) {
+          const existingItem = existingItems[0];
+          const newQuantity = existingItem.quantity + 1;
+
+          const { error: updateError } = await supabase
+            .from('cart_items')
+            .update({ quantity: newQuantity })
+            .eq('id', existingItem.id);
+
+          if (updateError) {
+            console.error('Error updating cart item:', updateError);
+            throw new Error('Failed to update cart');
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from('cart_items')
+            .insert({
+              user_id: authUser.id,
+              product_id: product.id,
+              quantity: 1,
+            });
+
+          if (insertError) {
+            console.error('Error inserting cart item:', insertError);
+            throw new Error('Failed to add to cart');
+          }
+        }
+
+        navigate('/checkout');
+
+      } else {
+        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
+
+        const existingIndex = guestCart.findIndex(
+          item => item.productId === product.id
+        );
+
+        if (existingIndex !== -1) {
+          guestCart[existingIndex].quantity += 1;
+        } else {
+          guestCart.push({
+            id: `guest_${product.id}_${Date.now()}`,
+            productId: product.id,
+            name: product.name,
+            price: product.discountPrice || product.price,
+            image: product.rawImagePath,
+            quantity: 1,
+          });
+        }
+
+        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
+        navigate('/checkout');
+      }
+
+    } catch (err) {
+      console.error('Buy Now error:', err);
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBuyNowLoading(false);
+    }
+  };
+
+  const handleCardClick = () => {
+    navigate(`/product/${productId}`);
+  };
+
+  const toggleFavorite = (e) => {
+    e.stopPropagation();
+    setIsFavorite(!isFavorite);
+  };
+
+  const handleQuickView = (e) => {
+    e.stopPropagation();
+    navigate(`/product/${productId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="hp-product-card hp-product-card--skeleton" ref={isFirstCard ? ref : null}>
         <div className="hp-product-card__skeleton-image" />
         <div className="hp-product-card__skeleton-content">
           <div className="hp-product-card__skeleton-title" />
@@ -209,7 +682,7 @@ const HomepageProductCard = ({ productId }) => {
   }
 
   if (error) {
-    return <div className="hp-product-card hp-product-card--error">{error}</div>;
+    return <div className="hp-product-card hp-product-card--error" ref={isFirstCard ? ref : null}>{error}</div>;
   }
 
   return (
@@ -217,6 +690,7 @@ const HomepageProductCard = ({ productId }) => {
       className="hp-product-card"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      ref={isFirstCard ? ref : null}
     >
       <div className="hp-product-card__inner" onClick={handleCardClick}>
         <div className="hp-product-card__image-container">
@@ -337,7 +811,10 @@ const HomepageProductCard = ({ productId }) => {
       </div>
     </div>
   );
-};
+});
+
+HomepageProductCard.displayName = 'HomepageProductCard';
+
 
 /* ─── Main HomePage Component ─── */
 const HomePage = () => {
@@ -345,8 +822,24 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [shopNowLoading, setShopNowLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [heroProductId, setHeroProductId] = useState(null);
   const navigate = useNavigate();
+
+  // Ref for the Buy Now button on the hero product card
+  const heroBuyNowBtnRef = useRef(null);
+
+  // Check if user is visiting for the first time
+  useEffect(() => {
+    const hasSeenGuide = localStorage.getItem('gcmt_guide_seen');
+    if (!hasSeenGuide) {
+      // Delay showing guide to let the page load and render
+      const timer = setTimeout(() => {
+        setShowGuide(true);
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const testimonials = [
     {
@@ -424,6 +917,11 @@ const HomePage = () => {
         console.error('Error fetching products:', error.message);
       } else {
         setProducts(data);
+        // Set the first product as the hero product
+        if (data && data.length > 0) {
+          const firstInStock = data.find((p) => p.in_stock !== false) || data[0];
+          setHeroProductId(firstInStock.id);
+        }
       }
       setLoading(false);
     };
@@ -438,132 +936,16 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, [testimonials.length]);
 
-  // "Shop Now" handler — works exactly like the Buy Now button on ProductDetail page
-  const handleShopNow = async () => {
-    if (products.length === 0) {
-      // Fallback: if products haven't loaded yet, just go to products page
-      navigate('/products');
-      return;
-    }
-
-    // Pick the first available (in-stock) product
-    const firstProduct = products.find((p) => p.in_stock !== false) || products[0];
-
-    try {
-      setShopNowLoading(true);
-
-      // Get the first image path from the product
-      let firstImagePath = firstProduct.product_image || '';
-      if (firstImagePath.includes(',')) {
-        firstImagePath = firstImagePath.split(',')[0].trim();
-      }
-
-      // Calculate discount price if applicable
-      const discountPrice = firstProduct.product_discount
-        ? +(firstProduct.product_price * (1 - firstProduct.product_discount / 100)).toFixed(2)
-        : null;
-
-      // Check for authenticated user via Supabase
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      if (authUser) {
-        // ===== LOGGED-IN USER FLOW =====
-        // Check if this product already exists in cart
-        const { data: existingItems, error: fetchError } = await supabase
-          .from('cart_items')
-          .select('id, quantity')
-          .eq('user_id', authUser.id)
-          .eq('product_id', firstProduct.id);
-
-        if (fetchError) {
-          console.error('Error checking cart:', fetchError);
-          throw new Error('Failed to check cart');
-        }
-
-        if (existingItems && existingItems.length > 0) {
-          // Product already in cart - update quantity
-          const existingItem = existingItems[0];
-          const newQuantity = existingItem.quantity + 1;
-
-          const { error: updateError } = await supabase
-            .from('cart_items')
-            .update({ quantity: newQuantity })
-            .eq('id', existingItem.id);
-
-          if (updateError) {
-            console.error('Error updating cart item:', updateError);
-            throw new Error('Failed to update cart');
-          }
-
-          console.log('✅ Updated cart item quantity:', newQuantity);
-        } else {
-          // Product not in cart - insert new item
-          const { error: insertError } = await supabase
-            .from('cart_items')
-            .insert({
-              user_id: authUser.id,
-              product_id: firstProduct.id,
-              quantity: 1,
-            });
-
-          if (insertError) {
-            console.error('Error inserting cart item:', insertError);
-            throw new Error('Failed to add to cart');
-          }
-
-          console.log('✅ Added new item to cart_items');
-        }
-
-        // Navigate to checkout
-        navigate('/checkout');
-
-      } else {
-        // ===== GUEST USER FLOW =====
-        // Checkout reads guest cart from: JSON.parse(sessionStorage.getItem('guest_cart')) || []
-        // Expected format per item: { id, productId, name, price, image, quantity }
-
-        const guestCart = JSON.parse(sessionStorage.getItem('guest_cart')) || [];
-
-        // Check if product already exists in guest cart
-        const existingIndex = guestCart.findIndex(
-          item => item.productId === firstProduct.id
-        );
-
-        if (existingIndex !== -1) {
-          // Update quantity of existing item
-          guestCart[existingIndex].quantity += 1;
-          console.log('✅ Updated guest cart item quantity:', guestCart[existingIndex].quantity);
-        } else {
-          // Add new item matching the format Checkout expects
-          guestCart.push({
-            id: `guest_${firstProduct.id}_${Date.now()}`,
-            productId: firstProduct.id,
-            name: firstProduct.product_name,
-            price: discountPrice || firstProduct.product_price,
-            image: firstImagePath,
-            quantity: 1,
-          });
-
-          console.log('✅ Added new item to guest cart');
-        }
-
-        // Save back to sessionStorage
-        sessionStorage.setItem('guest_cart', JSON.stringify(guestCart));
-
-        // Navigate to checkout
-        navigate('/checkout');
-      }
-
-    } catch (err) {
-      console.error('Shop Now error:', err);
-      alert(err.message || 'Something went wrong. Please try again.');
-    } finally {
-      setShopNowLoading(false);
-    }
-  };
-
   return (
     <div className="hp-homepage">
+      {/* First Time Guide Overlay - Single Step */}
+      {showGuide && heroProductId && (
+        <FirstTimeGuide
+          onClose={() => setShowGuide(false)}
+          buyNowBtnRef={heroBuyNowBtnRef}
+        />
+      )}
+
       {/* Announcement Bar */}
       <div className="hp-announcement-bar">
         <p>
@@ -575,10 +957,18 @@ const HomePage = () => {
       {/* Hero Section */}
       <section className="hp-hero">
         <div className="hp-container">
-          <div className="hp-hero-grid">
-            {/* Hero Content — badge + stats only, text removed */}
+          <div className="hp-hero-grid hp-hero-grid--with-product">
+            {/* Hero Content */}
             <div className="hp-hero-content">
               <div className="hp-hero-badge">✨ India's #1 Herbal Brand</div>
+
+              <h1 className="hp-hero-title">
+                Premium Herbal <span className="hp-text-gradient">Wellness</span> Products
+              </h1>
+
+              <p className="hp-hero-subtitle">
+                Discover the power of nature with our scientifically formulated herbal products.
+              </p>
 
               <div className="hp-hero-stats">
                 <div className="hp-hero-stat">
@@ -597,23 +987,43 @@ const HomePage = () => {
 
               <div className="hp-hero-buttons">
                 <button
-                  className="hp-btn-primary"
-                  onClick={handleShopNow}
-                  disabled={shopNowLoading}
-                >
-                  {shopNowLoading ? 'Adding...' : 'Shop Now'} <ArrowRight size={18} />
-                </button>
-                <button
                   className="hp-btn-secondary"
                   onClick={() => navigate('/about')}
                 >
                   Learn Our Story
                 </button>
+                <button
+                  className="hp-btn-tertiary"
+                  onClick={() => navigate('/products')}
+                >
+                  View All Products <ArrowRight size={18} />
+                </button>
               </div>
             </div>
 
-            {/* Hero Video */}
-            <div className="hp-hero-video-container">
+            {/* Hero Product Card - The main focus for guide */}
+            <div className="hp-hero-product-wrapper">
+              <div className="hp-hero-product-label">
+                <span>🔥 Best Seller</span>
+              </div>
+              {heroProductId ? (
+                <HeroProductCard
+                  productId={heroProductId}
+                  buyNowBtnRef={heroBuyNowBtnRef}
+                />
+              ) : (
+                <div className="hp-hero-product-card hp-hero-product-card--skeleton">
+                  <div className="hp-hero-product-card__skeleton-image" />
+                  <div className="hp-hero-product-card__skeleton-content">
+                    <div className="hp-hero-product-card__skeleton-title" />
+                    <div className="hp-hero-product-card__skeleton-price" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Hero Video - Now smaller */}
+            <div className="hp-hero-video-container hp-hero-video-container--compact">
               <div className="hp-hero-video-wrapper">
                 <video
                   className="hp-hero-video"
@@ -674,10 +1084,11 @@ const HomePage = () => {
                 <p>Loading our amazing products...</p>
               </div>
             ) : (
-              products.map((product) => (
+              products.map((product, index) => (
                 <HomepageProductCard
                   key={product.id}
                   productId={product.id}
+                  isFirstCard={index === 0}
                 />
               ))
             )}
