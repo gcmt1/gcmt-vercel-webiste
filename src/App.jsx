@@ -29,7 +29,6 @@ import AdminSubscription from "./pages/AdminSubscription";
 import AdminContactForm from "./pages/AdminContactForm";
 import YourOrders from "./pages/YourOrders";
 import AdminProductManager from "./pages/AdminProductManager";
-import SmoothExperience from "./components/SmoothExperience"; // ✅ Import
 import "./App.css";
 
 const supabase = createClient(
@@ -83,7 +82,6 @@ function App() {
                     <p>© 2025 Chase WorldWide. All rights reserved.</p>
                   </footer>
                 </div>
-              </SmoothExperience> {/* ✅ Close wrapper */}
             </Router>
           </ToastProvider>
         </AppProvider>
