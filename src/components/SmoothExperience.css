@@ -1,0 +1,293 @@
+/* ═══════════════════════════════════════════════
+   SMOOTH EXPERIENCE - Global Performance & UX
+   ═══════════════════════════════════════════════ */
+
+/* ─── Root Smooth Defaults ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* ─── Wrapper ─── */
+.smooth-experience-wrapper {
+  will-change: opacity, transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+}
+
+/* ─── Page Transitions ─── */
+.se-page-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.se-page-hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.15s ease-out,
+              transform 0.15s ease-out;
+}
+
+.se-transitioning {
+  pointer-events: none;
+}
+
+/* ─── Disable transitions during resize ─── */
+body.se-resizing,
+body.se-resizing * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ─── Smooth All Interactive Elements ─── */
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+  transition: color 0.2s ease,
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease,
+              transform 0.2s ease,
+              opacity 0.2s ease;
+}
+
+/* Subtle press effect on buttons */
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: 0.1s;
+}
+
+/* ─── Smooth Image Rendering ─── */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  transition: opacity 0.4s ease;
+}
+
+img[data-src] {
+  opacity: 0;
+}
+
+img.se-visible,
+img:not([data-src]) {
+  opacity: 1;
+}
+
+/* ─── GPU Accelerated Scrollable Areas ─── */
+.app-main,
+[class*="container"],
+[class*="wrapper"],
+[class*="scroll"] {
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+}
+
+/* ─── Scroll-Triggered Animations ─── */
+.se-fade-in {
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.se-fade-in.se-visible {
+  opacity: 1;
+}
+
+.se-slide-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.se-slide-up.se-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.se-animate {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.se-animate.se-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered children animation */
+.se-stagger > * {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.se-stagger.se-visible > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(2) { transition-delay: 0.10s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(3) { transition-delay: 0.15s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(4) { transition-delay: 0.20s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(5) { transition-delay: 0.25s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(6) { transition-delay: 0.30s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(7) { transition-delay: 0.35s; opacity: 1; transform: translateY(0); }
+.se-stagger.se-visible > *:nth-child(8) { transition-delay: 0.40s; opacity: 1; transform: translateY(0); }
+
+/* ─── Smooth Scrollbar (Webkit) ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 100px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+/* ─── Focus Styles (Accessible + Smooth) ─── */
+:focus-visible {
+  outline: 2px solid #4f8cff;
+  outline-offset: 2px;
+  border-radius: 4px;
+  transition: outline-offset 0.15s ease;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Smooth Loading Skeleton Pulse ─── */
+.se-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: se-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes se-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Mobile Touch Optimizations ─── */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  button,
+  a,
+  input,
+  select,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Disable hover effects on touch devices */
+  button:hover,
+  a:hover {
+    transform: none !important;
+  }
+
+  /* Keep active/press feedback */
+  button:active,
+  a:active {
+    transform: scale(0.97) !important;
+    transition-duration: 0.08s !important;
+  }
+}
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .se-page-visible,
+  .se-page-hidden {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .se-fade-in,
+  .se-slide-up,
+  .se-animate {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ─── Print Optimization ─── */
+@media print {
+  .smooth-experience-wrapper {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ─── Performance Hints ─── */
+.app-header,
+.app-footer {
+  contain: layout style;
+}
+
+.app-main {
+  contain: layout;
+  min-height: 60vh;
+}
