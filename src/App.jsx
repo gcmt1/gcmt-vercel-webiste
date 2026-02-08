@@ -44,7 +44,6 @@ function App() {
           <ToastProvider>
             <Router>
               <ScrollToTop />
-              <SmoothExperience> {/* ✅ Wraps everything inside Router */}
                 <div className="app-container">
                   <header className="app-header">
                     <Navbar />
