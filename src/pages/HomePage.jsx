@@ -95,10 +95,11 @@ const HomePage = () => {
       {/*
         Mobile priority: the DOM order below is unchanged (good for SEO
         and for tablet/desktop visitors), but on phone screens the
-        "Featured Products" section is visually moved to the top via
-        flexbox `order` in HomePage.css, so shoppers land straight on
-        the product cards (with the Buy Now button) instead of having
-        to scroll past the full hero section first.
+        "Featured Products" section is visually moved to the very top
+        (above even the announcement bar) via flexbox `order` in
+        HomePage.css, so shoppers land straight on the product cards —
+        each showing only a direct "Buy Now" button — as soon as they
+        open the site, instead of scrolling past the hero first.
       */}
 
       {/* Announcement Bar */}
@@ -208,7 +209,7 @@ const HomePage = () => {
               </div>
             ) : (
               products.map((product) => (
-                <ProductCard key={product.id} productId={product.id} />
+                <ProductCard key={product.id} productId={product.id} hideAddToCart />
               ))
             )}
           </div>
