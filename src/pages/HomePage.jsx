@@ -92,6 +92,15 @@ const HomePage = () => {
 
   return (
     <div className="homepage">
+      {/*
+        Mobile priority: the DOM order below is unchanged (good for SEO
+        and for tablet/desktop visitors), but on phone screens the
+        "Featured Products" section is visually moved to the top via
+        flexbox `order` in HomePage.css, so shoppers land straight on
+        the product cards (with the Buy Now button) instead of having
+        to scroll past the full hero section first.
+      */}
+
       {/* Announcement Bar */}
       <div className="announcement-bar">
         <p>🎉 Free shipping on your first order | 100% Secure Checkout | Limited Time Offer! | UPI Available</p>
