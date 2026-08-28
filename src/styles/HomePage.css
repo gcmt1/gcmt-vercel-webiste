@@ -1053,6 +1053,49 @@ body {
   }
 }
 
+/* ===== MOBILE PRIORITY ORDER =====
+   On phone screens we want shoppers to land directly on the product
+   cards (and their Buy Now button) instead of scrolling past the full
+   hero section first. The JSX/DOM order stays the same (so it still
+   reads naturally on tablets, desktop, and for SEO) — here we only
+   change the *visual* order on narrow screens using flexbox `order`.
+*/
+@media (max-width: 767px) {
+  .homepage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .announcement-bar {
+    order: 1;
+  }
+
+  .products-section {
+    order: 2; /* shown first: product cards + direct Buy Now action */
+    padding-top: 1.75rem;
+  }
+
+  .hero {
+    order: 3;
+  }
+
+  .features-bar {
+    order: 4;
+  }
+
+  .benefits-section {
+    order: 5;
+  }
+
+  .testimonials-section {
+    order: 6;
+  }
+
+  .instagram-section {
+    order: 7;
+  }
+}
+
 /* ===== ACCESSIBILITY ===== */
 @media (prefers-reduced-motion: reduce) {
   *,
