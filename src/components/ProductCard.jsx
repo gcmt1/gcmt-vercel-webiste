@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import AddToCartButton from './AddToCartButton';
-import { Star, ShoppingCart, Eye, Heart } from 'lucide-react';
+import { useCart } from '../hooks/useCart';
+import { useToast } from './ToastContext';
+import { Star, ShoppingCart, Eye, Heart, Zap } from 'lucide-react';
 import '../styles/ProductCard.css';
 import DefaultProductImage from '../assets/product.png';
 
@@ -12,7 +14,10 @@ export default function ProductCard({ productId }) {
   const [error, setError] = useState(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
   const navigate = useNavigate();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchProduct() {
@@ -72,6 +77,23 @@ export default function ProductCard({ productId }) {
   const handleQuickView = (e) => {
     e.stopPropagation();
     navigate(`/product/${productId}`);
+  };
+
+  // Buy Now: adds the product straight to the cart and takes the
+  // customer directly to checkout, skipping an extra "view cart" step.
+  const handleBuyNow = async (e) => {
+    e.stopPropagation();
+    if (!product?.inStock || buyNowLoading) return;
+
+    setBuyNowLoading(true);
+    const success = await addToCart(product.id, 1);
+    setBuyNowLoading(false);
+
+    if (success) {
+      navigate('/checkout');
+    } else {
+      showToast('❌ Could not start checkout. Please try again.', 'error');
+    }
   };
 
   if (loading) {
@@ -177,15 +199,28 @@ export default function ProductCard({ productId }) {
       </div>
 
       <div className="product-card__footer" onClick={(e) => e.stopPropagation()}>
-        <AddToCartButton 
-          productId={product.id} 
-          quantity={1} 
-          disabled={!product.inStock}
-          className="product-card__add-to-cart-btn"
-        >
-          <ShoppingCart size={16} />
-          <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
-        </AddToCartButton>
+        <div className="product-card__button-group">
+          <AddToCartButton 
+            productId={product.id} 
+            quantity={1} 
+            disabled={!product.inStock}
+            className="product-card__add-to-cart-btn"
+          >
+            <ShoppingCart size={16} />
+            <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
+          </AddToCartButton>
+
+          <button
+            type="button"
+            className="product-card__buy-now-btn"
+            onClick={handleBuyNow}
+            disabled={!product.inStock || buyNowLoading}
+            aria-label="Buy now"
+          >
+            <Zap size={16} />
+            <span>{buyNowLoading ? 'Processing...' : 'Buy Now'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
