@@ -245,6 +245,11 @@
   gap: 8px;
 }
 
+/* When Add to Cart is hidden (homepage), Buy Now takes the full width */
+.product-card__button-group--single .product-card__buy-now-btn {
+  flex: 1 1 100%;
+}
+
 .product-card__add-to-cart-btn {
   width: 100%;
   flex: 1;
