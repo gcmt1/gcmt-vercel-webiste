@@ -1055,24 +1055,32 @@ body {
 
 /* ===== MOBILE PRIORITY ORDER =====
    On phone screens we want shoppers to land directly on the product
-   cards (and their Buy Now button) instead of scrolling past the full
-   hero section first. The JSX/DOM order stays the same (so it still
-   reads naturally on tablets, desktop, and for SEO) — here we only
-   change the *visual* order on narrow screens using flexbox `order`.
+   cards (each with a direct Buy Now button) the instant the homepage
+   opens — before the hero section AND before the announcement bar.
+   The JSX/DOM order stays the same (so it still reads naturally on
+   tablets, desktop, and for SEO) — here we only change the *visual*
+   order on narrow screens using flexbox `order`.
+
+   Note: the global fixed navbar reserves 80px of space above the page
+   (see .app-main in index.css) even though the mobile navbar itself is
+   only ~60px tall. The small negative margin below tightens that gap
+   so the product card sits right under the header instead of floating
+   further down the screen.
 */
 @media (max-width: 767px) {
   .homepage {
     display: flex;
     flex-direction: column;
-  }
-
-  .announcement-bar {
-    order: 1;
+    margin-top: -1.25rem;
   }
 
   .products-section {
-    order: 2; /* shown first: product cards + direct Buy Now action */
-    padding-top: 1.75rem;
+    order: 1; /* the very first thing shown on phones */
+    padding-top: 0.75rem;
+  }
+
+  .announcement-bar {
+    order: 2;
   }
 
   .hero {
