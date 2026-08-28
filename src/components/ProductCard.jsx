@@ -8,7 +8,7 @@ import { Star, ShoppingCart, Eye, Heart, Zap } from 'lucide-react';
 import '../styles/ProductCard.css';
 import DefaultProductImage from '../assets/product.png';
 
-export default function ProductCard({ productId }) {
+export default function ProductCard({ productId, hideAddToCart = false }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -199,16 +199,18 @@ export default function ProductCard({ productId }) {
       </div>
 
       <div className="product-card__footer" onClick={(e) => e.stopPropagation()}>
-        <div className="product-card__button-group">
-          <AddToCartButton 
-            productId={product.id} 
-            quantity={1} 
-            disabled={!product.inStock}
-            className="product-card__add-to-cart-btn"
-          >
-            <ShoppingCart size={16} />
-            <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
-          </AddToCartButton>
+        <div className={`product-card__button-group ${hideAddToCart ? 'product-card__button-group--single' : ''}`}>
+          {!hideAddToCart && (
+            <AddToCartButton 
+              productId={product.id} 
+              quantity={1} 
+              disabled={!product.inStock}
+              className="product-card__add-to-cart-btn"
+            >
+              <ShoppingCart size={16} />
+              <span>{product.inStock ? 'Add to Cart' : 'Out of Stock'}</span>
+            </AddToCartButton>
+          )}
 
           <button
             type="button"
